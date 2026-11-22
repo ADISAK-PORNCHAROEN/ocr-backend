@@ -1,6 +1,6 @@
 # โครงสร้าง FastAPI และ uv
 
-สถานะ: โครงสร้างที่ตกลงใช้สำหรับการพัฒนา ยังไม่ได้สร้างโค้ดหรือ dependency โครงสร้างอ้างอิง Splitbill ที่แบ่งตามชั้นงาน แล้วแยกไฟล์ตามความรับผิดชอบภายในแต่ละชั้น
+สถานะ: implementation ปัจจุบันของ backend จัดตามชั้นงานที่ตกลงไว้ โดยแต่ละไฟล์แยกตามความรับผิดชอบ
 
 ## การใช้งานจาก frontend
 
@@ -16,32 +16,23 @@ ocr-backend/
 ├── .gitignore
 ├── app/
 │   ├── main.py                     # สร้าง FastAPI, lifespan และลงทะเบียน router
-│   ├── core/
-│   │   └── config.py               # limits, model revision, temp path, worker count
-│   ├── entities/
-│   │   ├── job.py                  # Job และสถานะงาน
-│   │   └── page.py                 # สถานะหน้าและผล OCR เดิม
-│   ├── repositories/
-│   │   └── jobs.py                 # เก็บและอ่านงานและ artifacts ชั่วคราว
-│   ├── services/
-│   │   └── jobs.py                 # จัดคิว ประมวลผล รวมผล ลบและหมดอายุ
+│   ├── core/                       # settings และ error types
+│   ├── entities/                   # Job, Page, สถานะ, ผล OCR และ progress
+│   ├── repositories/               # งานในหน่วยความจำและ artifacts ชั่วคราว
+│   ├── services/                   # คิว, วงจรงาน, progress, delete และ expiry
 │   ├── api/
-│   │   ├── controllers/
-│   │   │   └── jobs.py             # HTTP endpoints ของงาน OCR
-│   │   └── schemas/
-│   │       └── jobs.py             # request และ response ของ HTTP
-│   ├── documents/
-│   │   └── reader.py               # ตรวจรูป/PDF และแปลงหน้าเป็นภาพ
-│   └── ocr/
-│       └── openthai.py             # เชื่อม runtime และแปลงผลโมเดล
+│   │   ├── controllers/            # health และ OCR job endpoints
+│   │   └── schemas/                # HTTP request/response แยกจาก entities
+│   ├── documents/                  # ตรวจไฟล์และนับหน้า/ขนาดภาพ
+│   └── ocr/                        # OpenThai process adapter และ mapping ผล
 ├── tests/
 │   ├── integration/                # API และวงจรชีวิตงาน
 │   ├── unit/                       # กฎที่ซับซ้อนและการแปลงผล
-│   └── smoke/                      # ตรวจ OCR จริงด้วยภาพตัวอย่าง
+│   └── smoke/                      # OCR จริงด้วยภาพและ PDF สังเคราะห์
 └── docs/
 ```
 
-แผนผังแสดงไฟล์ที่คาดว่าจะต้องมีเมื่อทำฟีเจอร์ครบ ไม่ใช่รายการไฟล์ที่มีอยู่แล้ว เพิ่ม `__init__.py` ตามความจำเป็น ไม่ต้องสร้างไฟล์ว่างหรือ layer ของ feature ที่ยังไม่มี
+รายละเอียด runtime และ API อยู่ใน [สถาปัตยกรรม](architecture.md), [สัญญา API สำหรับ frontend](frontend-api.md) และ [ข้อจำกัด runtime](runtime-limits.md) โครงสร้างแสดงขอบเขตของไฟล์จริง; เพิ่ม `__init__.py` ตามความจำเป็น และไม่สร้าง layer ว่างที่ไม่มีหน้าที่
 
 ## หน้าที่และทิศทางการเรียก
 
@@ -51,7 +42,7 @@ ocr-backend/
 
 ## ภาพร่าง interface
 
-ตัวอย่างนี้แสดงขอบเขต ยังไม่ใช่ implementation:
+ตัวอย่างนี้อธิบายขอบเขตของ implementation:
 
 ```python
 # controller เรียก service; HTTP types ไม่รั่วไปยัง entity

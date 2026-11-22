@@ -1,6 +1,6 @@
-# Foundation document delivery
+# Foundation document delivery snapshot
 
-This project has accepted product and API design documents but no OCR application, dependency manifest, application tests, database, or CI configuration. Each row records the canonical owner and source evidence; planned behavior is not implemented behavior.
+This table records the repository state during the initial AI foundation setup. It is historical evidence, not the current implementation checklist. Current OCR behavior and verification are documented in `docs/spec.md`, `docs/TESTING.md` and `docs/AI-FOUNDATION-REPORT.md`. Each row records the canonical owner and source evidence from that setup snapshot; planned behavior was not treated as implemented behavior at that time.
 
 | Document | Applicability and content evidence | Review / remaining decision |
 | --- | --- | --- |
