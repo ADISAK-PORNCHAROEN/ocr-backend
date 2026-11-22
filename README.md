@@ -40,6 +40,8 @@ uv run pytest
 
 The default test suite uses a fake OCR adapter. Real-model smoke tests are opt-in and download the model on first use; see `docs/TESTING.md`.
 
+This repository has no configured GitHub Actions workflow. Run the checks locally before opening a pull request.
+
 ## Runtime limits
 
 Current local defaults are documented in `docs/runtime-limits.md`. Upload/page limits and the retained-job cap are exposed to clients by the capabilities endpoint so a frontend does not hard-code limits.

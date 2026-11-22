@@ -2,9 +2,9 @@
 
 ## Scope and completion check
 
-The issue set captured at kickoff is `#1` through `#10` in `ADISAK-PORNCHAROEN/ocr-backend`. Issue #1 is the parent product specification. Issues #2 through #10 contain implementation work.
+The issue set captured at kickoff is `#1` through `#10` in `ADISAK-PORNCHAROEN/ocr-backend`. Issue #1 is the parent product specification. Issues #2 through #10 contain implementation work. The user later narrowed the active phase to backend delivery; frontend implementation is deferred.
 
-The task is complete when each implementation issue meets its acceptance criteria with recorded evidence, the parent specification is satisfied, the backend and frontend checks pass, both pull requests from `develop` to `main` are merged, and the related backend issues are closed with links to the delivered changes.
+The backend phase is complete when backend issues #2–#6 and #10 meet their acceptance criteria, are merged through a pull request, have verification evidence, and are closed with evidence comments. Keep parent issue #1 and frontend-dependent issues #7–#9 open until the frontend work is authorized and its requirements are proven. Provide the implemented API and usage guide for future frontend integration.
 
 The backend and frontend are separate repositories under the accepted project design. Backend issues #7 through #9 require code in `ADISAK-PORNCHAROEN/ocr-frontend`.
 
@@ -33,12 +33,12 @@ Keep the frontend's edits in memory and separate from original OCR data. The fro
 
 At kickoff, `develop` was clean at `3374e72`. The backend had no application code, dependency manifest, test runner, or CI baseline. The frontend repository had design documents and an open design pull request, but no application source or test runner.
 
-Run focused checks after each implementation unit. Run the full backend and frontend suites once after the final changes. Run a separate real-model CPU smoke test and a browser end-to-end flow. Review both diffs against the issue criteria and project security models before merging.
+Run focused checks after each implementation unit. The backend full suite, model smoke and browser integration were run for the delivered backend. The user requested removal of the repository GitHub Actions workflow; run the native backend checks locally before future PRs unless the owner configures another CI system.
 
 Make focused commits on `develop`. Merge through pull requests. Do not push commits directly to `main`.
 
 ## Progress on 2026-11-23
 
-Backend issues #10 and #2–#6 are implemented on `develop` in focused commits. The default suite, static checks, locked install and real-model CPU smoke pass locally. A target-machine experiment accepted a 20 MiB PNG and 20-page PDF at the configured limits, rendered all pages within the total-pixel budget, and rejected a 21-page PDF; OCR throughput and real-document behavior remain unmeasured. A review-discovered invalid-page response mismatch is fixed and covered through HTTP tests. A browser flow through the frontend BFF against the real loopback backend verified a synthetic Thai PNG, a two-page PDF, page images, OCR output, edited-text export and deletion. Issue status remains open until the changes are pushed, reviewed, CI passes and the backend implementation PR is merged.
+Backend issues #10 and #2–#6 were implemented in focused commits and merged through [PR #13](https://github.com/ADISAK-PORNCHAROEN/ocr-backend/pull/13). GitHub CI passed on PR #13 before the workflow was removed at the user's request. Issues #2–#6 and #10 were closed with evidence comments. A target-machine experiment accepted a 20 MiB PNG and 20-page A4 PDF at the configured limits, rendered all pages within the total-pixel budget, and rejected a 21-page PDF; OCR throughput and real-document behavior remain unmeasured. A review-discovered invalid-page response mismatch is fixed and covered through HTTP tests. A browser flow through the frontend BFF against the real loopback backend verified a synthetic Thai PNG, a two-page PDF, page images, OCR output, edited-text export and deletion.
 
-Frontend issues #7–#9 are implemented in `ADISAK-PORNCHAROEN/ocr-frontend` on `develop`; local unit, Playwright, build and live-backend integration checks pass. Existing foundation/design PRs and the implementation PR from `develop` to `main` still need to be reconciled with the latest branch state and merged through PRs. Keep both repositories' uncommitted documentation/index state intact while finalizing their review paths. Close backend #1 only after child issues #2–#10 have merged and its product-level requirements have evidence.
+Current execution scope is backend only. Backend issues #7–#9 depend on future frontend work and remain open; use the implemented API and client workflow documented in `docs/frontend-api.md` and `docs/frontend-guide.md` when that work is authorized. Keep parent issue #1 open until those frontend-dependent requirements have evidence.

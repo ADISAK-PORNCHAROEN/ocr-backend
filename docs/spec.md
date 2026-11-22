@@ -1,6 +1,6 @@
 # ข้อกำหนด OCR Playground
 
-สถานะ: product spec ต้นทางของ issue #1; backend และ frontend implementation อยู่ใน working tree ของ branch `develop`, issue closure รอ PR merge และ CI
+สถานะ: product spec ต้นทางของ issue #1; backend issues #2–#6 และ #10 merged แล้วใน PR #13. Frontend-dependent issues #7–#9 ยังเปิดอยู่ และ issue #1 จะปิดเมื่อข้อกำหนดผลิตภัณฑ์ครบรวมงาน frontend.
 
 ## Problem Statement
 

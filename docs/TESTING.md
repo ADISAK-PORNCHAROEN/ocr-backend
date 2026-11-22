@@ -11,7 +11,7 @@ uv run mypy
 uv run pytest
 ```
 
-GitHub Actions runs these checks on pushes and pull requests. Keep the optional model smoke separate from CI so a normal test run does not depend on model downloads or Hub availability.
+This repository intentionally has no GitHub Actions workflow. Run these commands locally before opening a pull request. Keep the optional model smoke separate from the default suite so a normal test run does not depend on model downloads or Hub availability. The checks on backend PR #13 passed before the user requested workflow removal.
 
 ## Behavior covered
 
