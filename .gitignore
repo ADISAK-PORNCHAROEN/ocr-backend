@@ -1,0 +1,7 @@
+.venv/
+.graphify-venv/
+graphify-out/
+.env.local
+!.env.example
+__pycache__/
+*.py[cod]
