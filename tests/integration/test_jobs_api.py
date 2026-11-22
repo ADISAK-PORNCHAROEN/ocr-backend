@@ -140,9 +140,7 @@ def test_invalid_page_numbers_return_job_not_found(tmp_path) -> None:
             assert response.status_code == 404
             assert response.json()["error"]["code"] == "JOB_NOT_FOUND"
 
-            image_response = client.get(
-                f"/api/v1/ocr/jobs/{job['id']}/pages/{page_number}/image"
-            )
+            image_response = client.get(f"/api/v1/ocr/jobs/{job['id']}/pages/{page_number}/image")
             assert image_response.status_code == 404
             assert image_response.json()["error"]["code"] == "JOB_NOT_FOUND"
 
