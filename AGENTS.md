@@ -4,7 +4,7 @@ This project is a local FastAPI OCR playground. The accepted design uses OpenTha
 
 ## Working agreements
 
-- Work on a branch; open a pull request for every merge into `main`. Do not push commits directly to `main`.
+- Use `develop` as the primary working branch. Make focused, reviewable commits there, then open a pull request from `develop` into `main` when the work is ready. Merge into `main` through that pull request; do not push commits directly to `main`.
 - Split work into focused, reviewable commits by coherent change. Do not combine unrelated work into one commit. Preserve the user's changes.
 - Use Python, FastAPI and uv. Follow the accepted layer boundaries in `docs/folder-structure.md`; each feature owns its own files in each applicable layer.
 - Keep uploaded documents, OCR output, credentials and local environments out of Git.
