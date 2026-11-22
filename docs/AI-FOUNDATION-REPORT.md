@@ -12,7 +12,7 @@ The user separately requested the Graphify CLI and Git `post-commit` update hook
 
 ## Representative journey
 
-Requirement: a user submits a printed Thai/English document, monitors page progress and can edit and download the result ([product](../PRODUCT.md), [spec](spec.md)). The backend implements the documented API and OCR adapter; the separate frontend connects through its BFF. Local evidence includes backend HTTP integration tests, CPU model smoke tests for a synthetic Thai image and two-page PDF, and a browser flow through the real loopback backend. Current commands and results are in [testing](TESTING.md). The implementation is on `develop`; PR review, CI and merge are still pending.
+Requirement: a user submits a printed Thai/English document, monitors page progress and can edit and download the result ([product](../PRODUCT.md), [spec](spec.md)). The backend implements the documented API and OCR adapter. Backend PR #13 is merged and its checks passed; issues #2–#6 and #10 are closed with evidence. Local evidence includes backend HTTP integration tests, CPU model smoke tests for a synthetic Thai image and two-page PDF, and a browser flow through the real loopback backend. Current commands and results are in [testing](TESTING.md). Frontend-dependent issues #7–#9 and parent issue #1 remain open; the API usage contract is available in [frontend-api.md](frontend-api.md).
 
 ## Verification and gaps
 
