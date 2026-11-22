@@ -48,6 +48,6 @@ Backend มี unit, API integration และ model smoke coverage; frontend �
 | --- | --- | --- |
 | ขนาดไฟล์ จำนวนหน้า พิกเซล จำนวนงาน และอายุข้อมูล | ค่าเริ่มต้น local มี boundary tests และ synthetic boundary experiment บนเครื่องเป้าหมายใน runtime limits; ยังไม่มี benchmark throughput | ทบทวนหลังใช้งานเอกสารจริงหรือก่อนเปิด deployment เพิ่ม |
 | รูปแบบผล OCR พิกัด และช่วงความมั่นใจ | ยืนยันกับโมเดล v2.1.4 บน CPU และบันทึกในสัญญา API | ทบทวนเมื่อเปลี่ยน model revision หรือ output contract |
-| Browser integration และ UX | local browser flow ผ่าน BFF ไป backend จริง, Playwright ครอบคลุม upload, review, edit, export และ cleanup | รอ PR/CI ของ backend และ frontend ก่อนปิด issues #7–#9 |
+| Browser integration และ UX | local browser flow ผ่าน BFF ไป backend จริง; backend PR #13 merged; API contract พร้อมสำหรับ frontend | Frontend implementation และ issues #7–#9 ถูกเลื่อนไป phase ถัดไป; issue #1 คงเปิด |
 
 ตัวเลขในตัวอย่าง API เป็นค่าเริ่มต้นของ local demo และ capabilities endpoint คืนค่าที่ตั้งจริงให้ frontend ใช้ ระบบยังไม่กำหนดเกณฑ์คุณภาพ OCR หรือความเร็วที่ยังไม่ได้วัด

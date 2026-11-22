@@ -2,7 +2,7 @@
 
 ## ขอบเขตและหลักฐาน
 
-สถานะ: backend และ frontend implementation อยู่ใน working tree ของ branch `develop`; local checks และ manual review ทำแล้ว ทบทวน 2026-11-23
+สถานะ: backend PR #13 merged แล้ว; ผู้ใช้ขอให้ลบ GitHub Actions workflow และ deferred frontend work ไว้ภายหลัง ตรวจ local checks และ manual review แล้ว ทบทวน 2026-11-23
 
 แหล่งอ้างอิงคือ [ขอบเขตโปรเจกต์](project-scope.md), [ข้อกำหนด](spec.md), [สถาปัตยกรรม](architecture.md), [โครงสร้างโค้ด](folder-structure.md), [คู่มือ frontend](frontend-guide.md) และ [สัญญา API](frontend-api.md) ตารางด้านล่างแยก controls ที่ implement และทดสอบแล้วออกจากช่องว่างที่ยังเหลือ
 
