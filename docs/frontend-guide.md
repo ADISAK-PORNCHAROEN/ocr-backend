@@ -1,6 +1,6 @@
 # คู่มือออกแบบ frontend
 
-สถานะ: ข้อกำหนดสำหรับเวอร์ชันแรก API ยังไม่ได้พัฒนา ดู [สัญญา API](frontend-api.md) และ [ขอบเขตโปรเจกต์](project-scope.md)
+สถานะ: UX specification สำหรับ frontend repository แยก; frontend implementation และ local integration อยู่ใน branch `develop` ดู [สัญญา API](frontend-api.md) และ [ขอบเขตโปรเจกต์](project-scope.md)
 
 ## ลำดับการใช้งาน
 

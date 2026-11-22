@@ -1,17 +1,17 @@
 # OCR Playground
 
-สถานะ: ขอบเขตเวอร์ชันแรกที่ตกลงแล้ว ยังไม่มี implementation
-ทบทวน: 2026-11-22 จากเอกสารใน repository ขณะตั้งค่า AI Project Foundation
+สถานะ: backend และ frontend implementation อยู่ใน working tree ของ branch `develop`; issue ยังเปิดจนกว่าจะ merge ผ่าน PR และ CI
+ทบทวน: 2026-11-23 จาก issue #1 และ implementation ใน working tree
 
 ## หลักฐานและเจตนา
 
 | ประเภท | ข้อเท็จจริง | แหล่งอ้างอิง |
 | --- | --- | --- |
 | ขอบเขตที่ตกลง | โปรเจกต์ portfolio สำหรับทดลอง OCR เอกสารตัวพิมพ์ภาษาไทยและอังกฤษด้วย OpenThai OCR Text บน CPU สาธิตบนเครื่องตัวเองก่อน | [ขอบเขตโปรเจกต์](docs/project-scope.md) |
-| รายละเอียดพฤติกรรม | มี user stories และแนวทางทดสอบ แต่รายละเอียด API ยังเป็นข้อเสนอ | [ข้อกำหนดฉบับร่าง](docs/spec.md), [สัญญา API ฉบับร่าง](docs/frontend-api.md) |
-| สิ่งที่พบใน repository | มีเอกสารวางแผนและศัพท์โดเมน ยังไม่มี source, dependency manifest, ชุดทดสอบ หรือ frontend | [โครงสร้างที่ตกลงใช้](docs/folder-structure.md) ระบุว่าไฟล์ในแผนผังยังไม่ได้สร้าง |
+| รายละเอียดพฤติกรรม | ขอบเขตและ user stories อยู่ใน spec; สัญญา API ตรงกับ backend implementation | [ข้อกำหนด](docs/spec.md), [สัญญา API](docs/frontend-api.md) |
+| สิ่งที่อยู่ใน repository | Backend และ frontend app, API/unit/integration/browser tests และ CI ถูก implement แล้ว; local checks และ real-model flow ผ่าน | [โครงสร้างโค้ด](docs/folder-structure.md), [การทดสอบ](docs/TESTING.md) |
 
-เอกสารนี้สรุปขอบเขตที่ยืนยันในเอกสารเดิม ไม่รับรองว่าระบบทำงานแล้ว รายละเอียด request, response และ error อยู่ที่สัญญา API ฉบับร่างเพียงแห่งเดียว
+เอกสารนี้สรุปขอบเขตที่ยืนยันใน issue #1 รายละเอียด request, response และ error อยู่ที่สัญญา API เพียงแห่งเดียว
 
 ## ผู้ใช้และเป้าหมาย
 
@@ -34,7 +34,7 @@ Frontend อยู่ในโปรเจกต์แยก เก็บข้�
 
 ## ตัวอย่างผลที่ใช้ยอมรับงาน
 
-ตัวอย่างต่อไปนี้มาจากขอบเขตที่ตกลง และยังไม่มี test execution รองรับ ดู [แผนการทดสอบ](docs/TESTING.md)
+Backend มี unit, API integration และ model smoke coverage; frontend มี fixture E2E และ real backend browser flow ตาม [แผนการทดสอบ](docs/TESTING.md)
 
 - เมื่อ OCR อ่านหน้าสำเร็จแต่ไม่พบข้อความ หน้านั้นยังสำเร็จและผู้ใช้เพิ่มข้อความเองได้
 - เมื่อบางหน้าล้มเหลว ผู้ใช้ตรวจและดาวน์โหลดหน้าที่สำเร็จได้ พร้อมคำเตือนว่าผลไม่ครบ
@@ -46,8 +46,8 @@ Frontend อยู่ในโปรเจกต์แยก เก็บข้�
 
 | เรื่อง | หลักฐานที่ต้องมี | ผู้ตัดสินใจและจังหวะทบทวน |
 | --- | --- | --- |
-| ขนาดไฟล์ จำนวนหน้า พิกเซล จำนวนงาน และอายุข้อมูล | ผลวัด CPU และ RAM บนเครื่องเป้าหมาย รวมการแปลง PDF | เจ้าของโปรเจกต์ ก่อนกำหนดค่าตั้งต้นและเปิดรับงาน |
-| รูปแบบผล OCR พิกัด และช่วงความมั่นใจ | ผลโมเดลจริงที่ตรึงรุ่น พร้อมภาพที่แสดง | เจ้าของโปรเจกต์ หลังทดลองโมเดล ก่อนยืนยัน API |
-| รายละเอียด API ที่ยังขาด | ข้อผิดพลาดเมื่อคิวเต็ม และการจับคู่สถานะภายในกับสถานะ HTTP | เจ้าของโปรเจกต์ ก่อนพัฒนา endpoint ที่เกี่ยวข้อง |
+| ขนาดไฟล์ จำนวนหน้า พิกเซล จำนวนงาน และอายุข้อมูล | ค่าเริ่มต้น local พร้อมเหตุผลและ boundary tests อยู่ใน runtime limits; ยังไม่มี benchmark throughput | ทบทวนหลังใช้งานเอกสารจริงหรือก่อนเปิด deployment เพิ่ม |
+| รูปแบบผล OCR พิกัด และช่วงความมั่นใจ | ยืนยันกับโมเดล v2.1.4 บน CPU และบันทึกในสัญญา API | ทบทวนเมื่อเปลี่ยน model revision หรือ output contract |
+| Browser integration และ UX | local browser flow ผ่าน BFF ไป backend จริง, Playwright ครอบคลุม upload, review, edit, export และ cleanup | รอ PR/CI ของ backend และ frontend ก่อนปิด issues #7–#9 |
 
-ตัวเลขในตัวอย่าง API ไม่ใช่ขีดจำกัดหรืออายุข้อมูลที่ตกลงแล้ว ไม่กำหนดเกณฑ์คุณภาพหรือความเร็วที่ยังไม่ได้วัด
+ตัวเลขในตัวอย่าง API เป็นค่าเริ่มต้นของ local demo และ capabilities endpoint คืนค่าที่ตั้งจริงให้ frontend ใช้ ระบบยังไม่กำหนดเกณฑ์คุณภาพ OCR หรือความเร็วที่ยังไม่ได้วัด

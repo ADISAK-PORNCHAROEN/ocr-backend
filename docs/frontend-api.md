@@ -1,143 +1,143 @@
-# สัญญา API สำหรับ frontend
+# API contract for the frontend
 
-สถานะ: ข้อเสนอสำหรับเวอร์ชันแรก ยังไม่มี API ที่ติดตั้งใช้งาน ต้องตรวจรูปแบบผลลัพธ์จริงของโมเดลและกำหนดขีดจำกัดก่อนพัฒนา อ้างอิง [ขอบเขตโปรเจกต์](project-scope.md) และ [คู่มือ frontend](frontend-guide.md)
+Status: implemented by the backend. The frontend is a separate repository and should consume this contract through its Next.js BFF. JSON field names are snake_case. Timestamps use ISO 8601 with a timezone. Page numbering starts at 1. Job state and uploaded data are memory-only and temporary.
 
-Base path: `/api/v1` เวลาใช้รูปแบบ ISO 8601 พร้อม timezone เลขหน้าเริ่มที่ 1 รูปภาพมีหนึ่งหน้า
+Base path: `/api/v1`
 
-## สร้างงาน
+## Capabilities
 
-`POST /api/v1/ocr/jobs` รับ `multipart/form-data` โดย field `file` เป็น JPG, PNG หรือ PDF หนึ่งไฟล์
-
-ตัวอย่าง `202 Accepted`:
+`GET /api/v1/ocr/capabilities` returns the configured upload limits, supported media types, model revision and worker settings. Read it before accepting a file instead of hard-coding backend limits.
 
 ```json
 {
-  "jobId": "7a0d4c31-3281-4c37-895e-23a33be75946",
+  "supported_media_types": ["image/jpeg", "image/png", "application/pdf"],
+  "max_upload_bytes": 20971520,
+  "max_pages": 20,
+  "pdf_dpi": 150,
+  "max_page_pixels": 25000000,
+  "max_total_pixels": 80000000,
+  "max_pending_jobs": 2,
+  "max_retained_jobs": 5,
+  "worker_count": 1,
+  "job_ttl_seconds": 3600,
+  "model_id": "iapp/OpenThai2.1-OCR-Text-20261118",
+  "model_revision": "v2.1.4"
+}
+```
+
+`max_pending_jobs` is the waiting queue size. One additional job can be active. `max_retained_jobs` caps all jobs that still have temporary data, including completed jobs awaiting review. The API is intended to run as one process.
+
+## Create a job
+
+`POST /api/v1/ocr/jobs` accepts `multipart/form-data` with one field named `file`, containing one JPG, PNG or PDF. The backend identifies type from file bytes and decodes the document before adding it to the bounded queue. The client content type and filename extension do not establish file type.
+
+Response: `202 Accepted`. The response also includes a `Location` header for the status resource and `Cache-Control: no-store`.
+
+```json
+{
+  "id": "7a0d4c31-3281-4c37-895e-23a33be75946",
+  "filename": "document.pdf",
+  "media_type": "application/pdf",
   "status": "queued",
-  "createdAt": "2026-11-22T10:00:00Z",
-  "expiresAt": "2026-11-22T11:00:00Z"
+  "progress": {
+    "total_pages": 2,
+    "completed_pages": 0,
+    "failed_pages": 0,
+    "processing_pages": 0,
+    "processed_pages": 0
+  },
+  "created_at": "2026-11-23T10:00:00Z",
+  "expires_at": "2026-11-23T11:00:00Z"
 }
 ```
 
-เวลาหมดอายุในตัวอย่างไม่ใช่ค่าที่กำหนดจริง Backend ตรวจเนื้อหาไฟล์ ขนาด จำนวนหน้า และ PDF ที่ติดรหัสผ่านก่อนรับงาน
+The file is staged in an app-owned temporary directory. An accepted job may begin before the client receives the response.
 
-## ตรวจสถานะงาน
+## Capabilities and job status
 
-`GET /api/v1/ocr/jobs/{jobId}` คืน `200 OK`:
+`GET /api/v1/ocr/jobs/{job_id}` returns the same job shape as create. Poll while the status is `queued` or `processing`, then stop at a terminal status. `processed_pages` is completed plus failed pages; `processing_pages` is either zero or one with the current single worker.
 
-```json
-{
-  "jobId": "7a0d4c31-3281-4c37-895e-23a33be75946",
-  "status": "processing",
-  "file": { "name": "document.pdf", "mediaType": "application/pdf", "pageCount": 10 },
-  "progress": { "completedPages": 3, "failedPages": 1, "processedPages": 4, "totalPages": 10 },
-  "createdAt": "2026-11-22T10:00:00Z",
-  "expiresAt": "2026-11-22T11:00:00Z"
-}
-```
-
-`processedPages` รวมหน้าสำเร็จและล้มเหลว Frontend ตรวจสถานะเป็นระยะ เช่น ทุก 1–2 วินาที และหยุดเมื่อถึงสถานะสิ้นสุด
-
-| สถานะ | ความหมาย |
+| Status | Meaning |
 | --- | --- |
-| `queued` | รับงานแล้ว รอประมวลผล |
-| `processing` | กำลังประมวลผล |
-| `completed` | ทุกหน้าสำเร็จ รวมถึงหน้าที่ไม่พบข้อความ |
-| `partially_completed` | ประมวลผลครบ แต่บางหน้าล้มเหลว |
-| `failed` | ไม่มีหน้าสำเร็จ หรือเกิดข้อผิดพลาดระดับงาน |
+| `queued` | Accepted and waiting, or no page has started yet |
+| `processing` | A page is being rendered or recognized |
+| `completed` | Every page completed, including pages with no detected text |
+| `partially_completed` | All pages finished and at least one succeeded and one failed |
+| `failed` | All pages failed |
 
-สามสถานะท้ายเป็นสถานะสิ้นสุด
+The last three states are terminal. Progress and job status are derived from page states.
 
-## รายการหน้า
+## List pages and read OCR output
 
-`GET /api/v1/ocr/jobs/{jobId}/pages` คืน `200 OK`:
+`GET /api/v1/ocr/jobs/{job_id}/pages` returns all page results in document order. While work is in progress, some pages may still be `pending` or `processing`.
 
-```json
-{
-  "pages": [
-    { "pageNumber": 1, "status": "completed", "hasText": true },
-    { "pageNumber": 2, "status": "completed", "hasText": false },
-    { "pageNumber": 3, "status": "failed", "hasText": null,
-      "error": { "code": "PAGE_PROCESSING_FAILED", "message": "ไม่สามารถประมวลผลหน้านี้ได้" } },
-    { "pageNumber": 4, "status": "pending", "hasText": null }
-  ]
-}
-```
-
-สถานะหน้าเป็น `pending`, `processing`, `completed` หรือ `failed` หน้าว่างที่อ่านสำเร็จใช้ `completed` และ `hasText: false`
-
-## ผล OCR รายหน้า
-
-`GET /api/v1/ocr/jobs/{jobId}/pages/{pageNumber}` คืน `200 OK` ตัวอย่างหน้าสำเร็จ:
+`GET /api/v1/ocr/jobs/{job_id}/pages/{page_number}` returns the same shape for one page:
 
 ```json
 {
-  "pageNumber": 1,
+  "page_number": 1,
   "status": "completed",
-  "hasText": true,
-  "originalText": "หนังสือรับรอง",
-  "image": { "width": 1200, "height": 1800 },
+  "has_text": true,
+  "original_text": "หนังสือรับรอง",
   "lines": [
-    { "text": "หนังสือรับรอง", "confidence": 0.98,
-      "boundingBox": { "x": 120, "y": 180, "width": 310, "height": 42 } }
-  ]
+    {
+      "text": "หนังสือรับรอง",
+      "confidence": 0.98,
+      "box": { "x1": 120.0, "y1": 180.0, "x2": 430.0, "y2": 222.0 }
+    }
+  ],
+  "image_size": { "width": 1200, "height": 1800 },
+  "error": null,
+  "image_url": "/api/v1/ocr/jobs/7a0d4c31-3281-4c37-895e-23a33be75946/pages/1/image"
 }
 ```
 
-`originalText` และ `lines` เป็นผล OCR เดิม หน้าที่ไม่พบข้อความใช้ `originalText: ""` และ `lines: []` หน้า `pending`, `processing` หรือ `failed` คืนเลขหน้าและสถานะ โดยหน้า `failed` มี `error` และยังไม่มีผล OCR
+`original_text` and `lines` are the unedited output from OpenThai. A completed page with no text has `has_text: false`, `original_text: ""` and `lines: []`. Pending and processing pages have `has_text: null` and no result. Failed pages have `has_text: null`, no result, and an `error` object. An OCR failure may still have a rendered image available.
 
-สัญญาที่เสนอใช้ `confidence` ช่วง 0–1 และ `boundingBox` เป็นพิกเซลจากมุมซ้ายบนเทียบกับภาพที่ส่งโดย endpoint ภาพ ต้องตรวจและแปลงผลจริงของโมเดลให้ตรงก่อนยืนยันสัญญานี้
+OpenThai returns a four-corner polygon for each line. The backend converts it to an axis-aligned rectangle by taking the minimum and maximum x/y coordinates. `box` coordinates are pixels from the top-left of the rendered image. `confidence` is in the 0–1 range. The rendered image is PNG, oriented for display and composited onto white when the uploaded image is transparent. For PDFs, each page is rendered at the `pdf_dpi` reported by capabilities. These rules were verified with the pinned model on a synthetic Thai image and PDF pages.
 
-## ภาพรายหน้า
+The image endpoint is `GET /api/v1/ocr/jobs/{job_id}/pages/{page_number}/image`. It returns `image/png` and `Cache-Control: no-store`. It returns `409 PAGE_IMAGE_NOT_READY` until rendering finishes, and `404 JOB_NOT_FOUND` if the job is deleted, expired, or the page number is invalid.
 
-`GET /api/v1/ocr/jobs/{jobId}/pages/{pageNumber}/image` คืน `200 OK` และข้อมูลภาพ เช่น `Content-Type: image/png` PDF ใช้ภาพที่แปลงจากหน้าที่เลือก ส่วนภาพต้นฉบับใช้หน้า 1 ขนาดและแนวภาพต้องตรงกับพิกัดผล OCR ที่ส่งออก
+## Delete and retention
 
-## ลบงาน
+`DELETE /api/v1/ocr/jobs/{job_id}` removes the source document, rendered page images and OCR result from accessible job state, then returns `204 No Content`. A second delete returns `404 JOB_NOT_FOUND`.
 
-`DELETE /api/v1/ocr/jobs/{jobId}` ลบไฟล์ต้นฉบับ ภาพหน้า และผล OCR ชั่วคราว แล้วคืน `204 No Content` Frontend ส่งเมื่อเริ่มใหม่หรือจบงาน Backend ต้องลบงานหมดอายุด้วย เพราะปิดแท็บอาจส่งคำขอลบไม่สำเร็จ
+The frontend should delete when the user starts over or finishes. The backend also expires jobs after the configured TTL. Deletion makes a job inaccessible immediately; if an OCR worker is still reading its file, physical cleanup waits until that worker returns. Late worker results are discarded. On API startup, leftover UUID job directories owned by this application are removed. API restart clears job state; there is no history or recovery.
 
-## รูปแบบ JSON สำหรับดาวน์โหลด
+## Frontend edits and downloads
 
-Frontend สร้างไฟล์จากผลทุกหน้าที่สำเร็จและข้อความที่แก้ในหน่วยความจำ ข้อมูล OCR และพิกัดเป็นของข้อความเดิม ไม่ใช่ข้อความที่แก้:
+Edited text is frontend-only state. Keep it separate from `original_text`, and restore only the current page from the original result after confirmation. Build TXT and JSON downloads in the frontend from all successful pages after fetching them. If any successful page cannot be fetched, stop the download and show the incomplete result. Include failed page details in partial-result downloads. The backend does not store edited text or expose download endpoints.
+
+## Errors
+
+Application errors use one shape:
 
 ```json
 {
-  "schemaVersion": "1.0",
-  "sourceFile": "document.pdf",
-  "jobStatus": "partially_completed",
-  "pages": [
-    {
-      "pageNumber": 1,
-      "status": "completed",
-      "editedText": "ข้อความที่แก้ไขแล้ว",
-      "ocr": {
-        "originalText": "ข้อความเดิมจาก OCR",
-        "image": { "width": 1200, "height": 1800 },
-        "lines": [{ "text": "ข้อความเดิมจาก OCR", "confidence": 0.94,
-          "boundingBox": { "x": 120, "y": 180, "width": 590, "height": 42 } }]
-      }
-    },
-    { "pageNumber": 2, "status": "failed",
-      "error": { "code": "PAGE_PROCESSING_FAILED", "message": "ไม่สามารถประมวลผลหน้านี้ได้" } }
-  ]
+  "error": {
+    "code": "JOB_QUEUE_FULL",
+    "message": "ระบบกำลังประมวลผลงานเต็ม โปรดลองอีกครั้งภายหลัง",
+    "retryable": true
+  }
 }
 ```
 
-## ข้อผิดพลาด
+| HTTP | Code | Meaning |
+| ---: | --- | --- |
+| 409 | `PAGE_IMAGE_NOT_READY` | The page image has not been rendered yet |
+| 409 | `JOB_STORAGE_LIMIT_REACHED` | The temporary job limit is reached; delete an old job before uploading |
+| 413 | `FILE_TOO_LARGE` | Uploaded file exceeds the byte limit |
+| 415 | `UNSUPPORTED_FILE_TYPE` | File contents are not JPG, PNG or PDF |
+| 415 | `FILE_EXTENSION_MISMATCH` | Filename extension does not match the detected file contents |
+| 422 | `EMPTY_FILE` | File is empty |
+| 422 | `CORRUPT_IMAGE` / `CORRUPT_PDF` | The document cannot be decoded |
+| 422 | `PDF_PASSWORD_PROTECTED` | Encrypted PDF files are not accepted |
+| 422 | `PAGE_LIMIT_EXCEEDED` | Document has too many pages |
+| 422 | `PAGE_DIMENSION_LIMIT_EXCEEDED` | A page dimension exceeds the limit |
+| 422 | `PAGE_PIXEL_LIMIT_EXCEEDED` / `PDF_PIXEL_LIMIT_EXCEEDED` / `DOCUMENT_PIXEL_LIMIT_EXCEEDED` | Rendered pixel budget is exceeded |
+| 422 | `INVALID_REQUEST` | Request parameters or multipart form are invalid |
+| 404 | `JOB_NOT_FOUND` | Job is missing, deleted, expired, or page number is invalid |
+| 503 | `JOB_QUEUE_FULL` | Waiting queue is full; response includes `Retry-After` |
+| 500 | `INTERNAL_ERROR` | Unexpected server failure |
 
-ข้อผิดพลาดระดับ HTTP ใช้รูปแบบเดียวกัน:
-
-```json
-{ "error": { "code": "UNSUPPORTED_FILE_TYPE", "message": "รองรับเฉพาะไฟล์ JPG, PNG และ PDF" } }
-```
-
-| HTTP | Code | ความหมาย |
-| --- | --- | --- |
-| 400 | `INVALID_FILE` | ไฟล์ไม่ถูกต้องหรือเปิดไม่ได้ |
-| 400 | `PDF_PASSWORD_PROTECTED` | PDF มีรหัสผ่าน |
-| 413 | `FILE_TOO_LARGE` | ไฟล์เกินขนาดที่รองรับ |
-| 415 | `UNSUPPORTED_FILE_TYPE` | ชนิดไฟล์ไม่รองรับ |
-| 422 | `PAGE_LIMIT_EXCEEDED` | จำนวนหน้าเกินที่รองรับ |
-| 404 | `JOB_NOT_FOUND` | งานไม่พบ ถูกลบ หรือหมดอายุ |
-| 404 | `PAGE_NOT_FOUND` | ไม่พบหน้าที่ระบุ |
-| 500 | `INTERNAL_ERROR` | ข้อผิดพลาดภายใน |
+Every job and image response uses `Cache-Control: no-store`. This backend does not configure CORS; the frontend should call through its own same-origin BFF. The local demo has no authentication and is not approved for public deployment.

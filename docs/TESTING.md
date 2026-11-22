@@ -1,41 +1,49 @@
-# การทดสอบ OCR Playground
+# OCR Playground testing
 
-## สถานะและแหล่งอ้างอิง
+## Native checks
 
-ทบทวน 2026-11-22: repository มีเอกสารวางแผน ยังไม่มี source, `pyproject.toml`, `uv.lock`, `tests/`, test runner, coverage configuration หรือ CI ที่รันได้ จึงยังไม่มี test baseline หรือ mandatory native command ที่ตรวจจาก configuration ได้
+Install the project and development tools with `uv sync --group dev`. The default suite uses synthetic files and a fake OCR adapter; it does not download the model.
 
-แนวทางที่ตกลงอยู่ใน [ข้อกำหนด ส่วน Testing Decisions](spec.md#testing-decisions), [สถาปัตยกรรม](architecture.md) และ [โครงสร้างที่เสนอ](folder-structure.md) ตัวอย่าง `uv sync`, `uv run uvicorn app.main:app --reload` และ `uv run pytest` ในโครงสร้างเป็นคำสั่งสำหรับหลังพัฒนาและติดตั้ง dependencies ไม่ใช่คำสั่งที่ยืนยันว่ารันได้ตอนนี้
+```powershell
+uv run ruff check app tests
+uv run ruff format --check app tests
+uv run mypy
+uv run pytest
+```
 
-## เลือกการทดสอบตามพฤติกรรม
+GitHub Actions runs these checks on pushes and pull requests. Keep the optional model smoke separate from CI so a normal test run does not depend on model downloads or Hub availability.
 
-| ขอบเขตที่เปลี่ยน | ชั้นทดสอบและผลที่ต้องตรวจ | หลักฐานความต้องการ |
-| --- | --- | --- |
-| HTTP และการรับไฟล์ | Integration ผ่าน HTTP ใช้ OCR adapter จำลองเพื่อคุมผล ตรวจ JPG, PNG, PDF หลายหน้า ไฟล์เสีย ชนิดไม่ตรง PDF มีรหัสผ่าน และขอบค่าขีดจำกัดเมื่อกำหนดแล้ว | [API ฉบับร่าง](frontend-api.md), [PRODUCT.md](../PRODUCT.md) |
-| สถานะและการประมวลผลหน้า | Integration ตรวจรอ ประมวลผล สำเร็จทั้งหมด บางส่วน และล้มเหลว หน้าว่างสำเร็จต้องต่างจากหน้าล้มเหลว ตรวจจำนวนหน้ากับสถานะจริง | [API ฉบับร่าง](frontend-api.md), [สถาปัตยกรรม](architecture.md) |
-| วงจรชีวิตข้อมูล | Integration ตรวจลบ หมดอายุ worker คืนผลหลังลบ ไฟล์เลิกใช้แล้วจึงลบ และการล้างไฟล์ตกค้างตอนเริ่มระบบ | [Security model](SECURITY-MODEL.md) |
-| กฎและการแปลงผล | Unit สำหรับกฎที่ซับซ้อน การรวมสถานะ และ mapping ผล OCR หลังทราบรูปแบบจริง | [โครงสร้างที่เสนอ](folder-structure.md) |
-| โมเดลและ PDF จริง | Smoke แยกจาก tests จำลอง ใช้ภาพและ PDF ตัวอย่างไทยและอังกฤษบน CPU ตรวจข้อความ ลำดับการอ่าน พิกัด และภาพที่ endpoint ส่ง | [ข้อกำหนด](spec.md), [สถาปัตยกรรม](architecture.md) |
-| Frontend ในโปรเจกต์แยก | ตรวจ flow อัปโหลด ติดตามผล สลับหน้า แก้ คัดลอก ยืนยันคืนค่า ดาวน์โหลดทุกหน้าสำเร็จ เตือนผลบางส่วน และเริ่มใหม่ | [คู่มือ frontend](frontend-guide.md), [DESIGN.md](../DESIGN.md) |
-| เอกสารและ workflow | อ่านเทียบแหล่งอ้างอิง ตรวจลิงก์ สถานะข้อเสนอ และแยกสิ่งที่ตกลงจากสิ่งที่ยังไม่พัฒนา | เอกสาร canonical ที่เปลี่ยน |
+## Behavior covered
 
-Tests จำลองพิสูจน์ HTTP และ lifecycle ภายใต้ผลที่ควบคุมได้ ไม่พิสูจน์คุณภาพ ความเข้ากันได้ หรือ performance ของโมเดลจริง API ยังเป็นฉบับร่าง ต้องยืนยันช่วงความมั่นใจ พิกัด และ error เมื่อคิวเต็มก่อนกำหนด assertions เหล่านั้นเป็นสัญญาถาวร
+| Boundary | Tests and observable behavior |
+| --- | --- |
+| Domain | Initial page states, derived job progress, blank success, all-failed status, invalid transitions, positive page numbers |
+| File validation | Content signature and extension agreement, malformed image, encrypted PDF, upload-byte cap, page count, page dimensions and pixel budget, PDF total pixel budget, sanitized display filename |
+| HTTP contract | Multipart upload, 202/Location, status polling, page list and OCR result, PNG page image, no-store headers, stable error envelope, capabilities and configured limits |
+| Multi-page results | PDF page count, completed blank page, failed page, partial job state, page images for available outputs |
+| Queue and lifecycle | Bounded queue and retained-job cap, delete while a worker is active, discard late results, expiry, inaccessible expired jobs and temporary-file cleanup |
+| Model and renderer | Optional real OpenThai OCR on a synthetic Thai image and real two-page PDF rendering on CPU |
 
-งาน implementation ใช้ `.agents/skills/test-engineering/SKILL.md` เมื่อ setup ติดตั้ง package ครบแล้ว และใช้คำสั่งจาก manifest และ CI ที่สร้างจริง เพิ่มการตรวจตามพฤติกรรมที่เปลี่ยนโดยไม่ถือว่าการมีไฟล์ skill เป็นผลทดสอบแอป
+Unit tests exercise local domain and document rules. HTTP integration tests use synthetic inputs and an injected fake processor to control page results, failures and worker timing. These tests do not claim OCR accuracy or performance.
 
-## ข้อมูลและการแยกสภาพแวดล้อม
+## Real model smoke
 
-Fixtures ต้องแยกจากเอกสารส่วนตัวและข้อมูลใช้งานจริง ใช้พื้นที่ชั่วคราวที่ test เป็นเจ้าของ และเก็บกวาดต้นฉบับ ภาพ ผล OCR และ process ของรอบทดสอบนั้น ตรวจ loopback address, port, temp root และเจ้าของ process ก่อนเริ่ม integration หรือ smoke run
+The model smoke uses the pinned `iapp/OpenThai2.1-OCR-Text-20261118` revision `v2.1.4`. The first run downloads its runtime and ONNX files from Hugging Face. On Windows, the Thai image fixture uses Tahoma by default; set `OCR_SMOKE_FONT` if another Thai-capable font should be used.
 
-ทดสอบการหมดอายุและผล worker มาช้าด้วยเงื่อนไขที่ควบคุมได้ หลีกเลี่ยงการอาศัยจังหวะเครื่องเพียงอย่างเดียว ไม่ลบพื้นที่ของผู้ใช้เพื่อพิสูจน์ cleanup
+```powershell
+$env:OCR_RUN_MODEL_SMOKE = "1"
+uv run pytest tests/smoke/test_openthai_cpu.py -vv
+Remove-Item Env:OCR_RUN_MODEL_SMOKE
+```
 
-## Coverage และ performance
+The smoke verifies Thai text, line boxes within the displayed image, confidence range, and rendering every page of a synthetic two-page PDF. It does not compare a corpus score or establish speed. The most recent local run on 2026-11-23 passed both smoke tests on CPU.
 
-ยังไม่มี coverage tool, denominator, exclusion หรือ threshold ที่ตกลง เจ้าของโปรเจกต์กำหนดเมื่อมี production source และ baseline โดยต้องไม่ซ่อน logic สำคัญที่ยังไม่ถูกทดสอบ การครอบคลุมข้อกำหนดกับ code coverage เป็นคนละหลักฐาน
+## Fixtures and cleanup
 
-ยังไม่มีผลวัดหรือเกณฑ์ความเร็วและคุณภาพ OCR การวัดในอนาคตแยก cold start กับ warm run และรวมอัปโหลด แปลง PDF OCR และดึงผล บันทึก CPU, RAM, รุ่นโมเดล, runtime, worker, inference thread และชุดเอกสารตามสถาปัตยกรรม ตรวจความถูกต้องของผลร่วมด้วยก่อนใช้ตัวเลขตัดสินใจ
+Tests generate synthetic images and PDFs in pytest-owned temporary directories. No user documents or OCR results are committed. The API fixture uses an isolated temporary storage root and checks cleanup on delete, expiry and shutdown. Do not change it to point at a user documents directory.
 
-## บันทึกผลและช่องว่าง
+## Runtime limits and measurements
 
-แต่ละรอบบันทึกคำสั่งจริง revision หรือ dirty scope จำนวนและผลทดสอบ เวลา ตำแหน่ง artifact ถ้ามี ข้อจำกัด และการเก็บกวาดทรัพยากร แยก harness failure จาก application failure เมื่อมี frontend ให้ระบุโปรเจกต์ revision และสถานะที่ตรวจด้วย
+The inspected local machine has Windows, Python 3.13, 8 logical processors and 31.8 GB RAM. The chosen defaults are 20 MiB per upload, 20 pages, PDF rendering at 150 DPI, 25 million pixels per page, 80 million total PDF pixels, 12,000 pixels per dimension, two waiting jobs plus one active job, five retained jobs, one OCR process with one inference thread, and a one-hour TTL. Unit tests exercise the byte, page, dimension and pixel boundaries; smoke tests verify the configured PDF raster path.
 
-การตั้งค่าเอกสารครั้งนี้ไม่รันทดสอบแอป เพราะยังไม่มี implementation และ dependencies ไม่สร้างตัวเลข coverage ภาพ visual baseline หรือรายงาน smoke ที่ยังไม่ได้รัน เมื่อเริ่มโค้ด ให้เพิ่ม manifest, lockfile และ runner ที่เลือกจริง แล้วปรับหน้านี้ให้ชี้คำสั่งและรายงานของโปรเจกต์
+These are conservative local-demo safeguards, not benchmark-derived throughput guarantees. No latency, throughput, OCR quality or peak-memory claims are made. If optimizing, measure cold start separately from warm per-page inference, record CPU/RAM and runtime/model revisions, and verify output quality alongside speed.
