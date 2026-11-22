@@ -46,7 +46,7 @@ Backend มี unit, API integration และ model smoke coverage; frontend �
 
 | เรื่อง | หลักฐานที่ต้องมี | ผู้ตัดสินใจและจังหวะทบทวน |
 | --- | --- | --- |
-| ขนาดไฟล์ จำนวนหน้า พิกเซล จำนวนงาน และอายุข้อมูล | ค่าเริ่มต้น local พร้อมเหตุผลและ boundary tests อยู่ใน runtime limits; ยังไม่มี benchmark throughput | ทบทวนหลังใช้งานเอกสารจริงหรือก่อนเปิด deployment เพิ่ม |
+| ขนาดไฟล์ จำนวนหน้า พิกเซล จำนวนงาน และอายุข้อมูล | ค่าเริ่มต้น local มี boundary tests และ synthetic boundary experiment บนเครื่องเป้าหมายใน runtime limits; ยังไม่มี benchmark throughput | ทบทวนหลังใช้งานเอกสารจริงหรือก่อนเปิด deployment เพิ่ม |
 | รูปแบบผล OCR พิกัด และช่วงความมั่นใจ | ยืนยันกับโมเดล v2.1.4 บน CPU และบันทึกในสัญญา API | ทบทวนเมื่อเปลี่ยน model revision หรือ output contract |
 | Browser integration และ UX | local browser flow ผ่าน BFF ไป backend จริง, Playwright ครอบคลุม upload, review, edit, export และ cleanup | รอ PR/CI ของ backend และ frontend ก่อนปิด issues #7–#9 |
 
