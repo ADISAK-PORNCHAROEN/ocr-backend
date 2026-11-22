@@ -25,9 +25,9 @@ On 2026-11-23, the configured byte, page-count and PDF pixel limits were exercis
 
 | Experiment | Result |
 | --- | --- |
-| Stage a valid PNG padded to exactly 20 MiB | Accepted at the configured byte limit; staging took 0.017 s |
-| Validate a synthetic blank 20-page A4 PDF | Accepted; validation took 0.051 s |
-| Render all 20 pages at 150 DPI | 1,275 × 1,651 px per page; 42,100,500 total pixels; 0.237 s for all pages, below the 80 million pixel cap |
-| Validate the same PDF with one extra page | Rejected with `PAGE_LIMIT_EXCEEDED` |
+| Stage a valid PNG padded to exactly 20 MiB | Accepted at the configured byte limit; staging took 0.018 s |
+| Validate a synthetic blank 20-page A4 PDF (595.28 × 841.89 points) | Accepted; validation took 0.041 s |
+| Render all 20 pages at 150 DPI | 1,241 × 1,754 px per page; 43,534,280 total pixels; 0.237 s for all pages, below the 80 million pixel cap |
+| Validate an otherwise identical 21-page A4 PDF | Rejected with `PAGE_LIMIT_EXCEEDED` |
 
 This confirms the selected byte and page-count boundaries and the 20-page PDF raster size on this machine. The image and PDF were synthetic and blank; the timings describe file validation and PDF rendering only. They do not measure OCR inference, peak memory, concurrent uploads, real scanned documents, throughput or OCR quality. The separate CPU model smoke verifies a synthetic Thai image and two-page PDF. Re-measure before changing defaults or using the service beyond the local demo.
