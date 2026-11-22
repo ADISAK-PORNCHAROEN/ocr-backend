@@ -156,11 +156,7 @@ class JobsService:
         stored = self.repository.delete(job_id)
         if stored is None:
             raise JobNotFound()
-        if job_id in self._active:
-            self._deferred_cleanup[job_id] = stored.document
-        else:
-            self._admitted.discard(job_id)
-            self.repository.remove_document(stored.document)
+        self._defer_or_remove_document(job_id, stored.document)
 
     async def _process_queue(self) -> None:
         while True:
@@ -224,19 +220,18 @@ class JobsService:
     def _expire_due_jobs(self) -> None:
         for stored in self.repository.remove_expired(self._now()):
             job_id = stored.job.id
-            if job_id in self._active:
-                self._deferred_cleanup[job_id] = stored.document
-            else:
-                self._admitted.discard(job_id)
-                self.repository.remove_document(stored.document)
+            self._defer_or_remove_document(job_id, stored.document)
             logger.info("OCR job expired: %s", job_id)
 
     def _remove_expired_job(self, job_id: UUID) -> None:
         stored = self.repository.delete(job_id)
         if stored is None:
             return
+        self._defer_or_remove_document(job_id, stored.document)
+
+    def _defer_or_remove_document(self, job_id: UUID, document: StagedDocument) -> None:
         if job_id in self._active:
-            self._deferred_cleanup[job_id] = stored.document
+            self._deferred_cleanup[job_id] = document
         else:
             self._admitted.discard(job_id)
-            self.repository.remove_document(stored.document)
+            self.repository.remove_document(document)
