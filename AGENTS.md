@@ -13,7 +13,7 @@ This project is a local FastAPI OCR playground. The accepted design uses OpenTha
 ## Find the source
 
 - The implementation is not yet present; distinguish the accepted design from implemented behavior.
-- For codebase discovery, read `.agents/skills/graphify/SKILL.md` when useful, verify graph freshness and confirm results against source. The Graphify CLI is not installed by this setup; if unavailable, use targeted search.
+- For codebase discovery, read `.agents/skills/graphify/SKILL.md` when useful, verify graph freshness and confirm results against source. See `docs/agents/graphify.md` for this checkout's CLI and hook; use targeted search if the CLI is unavailable.
 
 ## Read by task
 
