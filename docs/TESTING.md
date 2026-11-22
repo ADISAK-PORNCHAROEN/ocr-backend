@@ -38,6 +38,15 @@ Remove-Item Env:OCR_RUN_MODEL_SMOKE
 
 The smoke verifies Thai text, line boxes within the displayed image, confidence range, and rendering every page of a synthetic two-page PDF. It does not compare a corpus score or establish speed. The most recent local run on 2026-11-23 passed both smoke tests on CPU.
 
+## Live BFF integration
+
+On 2026-11-23, a browser flow used the frontend BFF against the real backend on loopback with isolated temporary storage and synthetic inputs:
+
+- A Thai PNG upload returned a completed OCR result with `สวัสดีครับ OCR 123`. The TXT download preserved the text. Deletion returned `204`, and a later job lookup returned `404`.
+- A two-page PDF returned page 1 text `สวัสดีครับ OCR 123` and page 2 text `PAGE TWO 456`. Both page-image endpoints returned `200 image/png`. TXT contained both pages; JSON kept edited text separate from original OCR lines and coordinates. Deletion returned `204`, followed by `404` on lookup.
+
+This verifies the frontend-to-backend contract and temporary job lifecycle for these synthetic examples. It does not establish accuracy on real documents, OCR throughput or performance under concurrent use. Frontend implementation remains outside the current backend phase.
+
 ## Fixtures and cleanup
 
 Tests generate synthetic images and PDFs in pytest-owned temporary directories. No user documents or OCR results are committed. The API fixture uses an isolated temporary storage root and checks cleanup on delete, expiry and shutdown. Do not change it to point at a user documents directory.
