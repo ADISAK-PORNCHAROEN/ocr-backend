@@ -130,6 +130,23 @@ def test_blank_page_is_successful_not_failed(tmp_path) -> None:
     assert page["original_text"] == ""
 
 
+def test_invalid_page_numbers_return_job_not_found(tmp_path) -> None:
+    with make_client(tmp_path) as client:
+        job = upload_image(client)
+        wait_for_status(client, job["id"], {"completed"})
+
+        for page_number in (0, -1):
+            response = client.get(f"/api/v1/ocr/jobs/{job['id']}/pages/{page_number}")
+            assert response.status_code == 404
+            assert response.json()["error"]["code"] == "JOB_NOT_FOUND"
+
+            image_response = client.get(
+                f"/api/v1/ocr/jobs/{job['id']}/pages/{page_number}/image"
+            )
+            assert image_response.status_code == 404
+            assert image_response.json()["error"]["code"] == "JOB_NOT_FOUND"
+
+
 def test_jpeg_is_detected_from_bytes_when_client_type_is_generic(tmp_path) -> None:
     with make_client(tmp_path) as client:
         response = client.post(

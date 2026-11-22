@@ -142,7 +142,7 @@ class JobsService:
         job = self.get(job_id)
         try:
             return job.pages[PageNumber(page_number)]
-        except KeyError as exc:
+        except (KeyError, ValueError) as exc:
             raise JobNotFound() from exc
 
     def get_page_image(self, job_id: UUID, page_number: int) -> bytes:
