@@ -1,0 +1,5 @@
+.venv/
+.graphify-venv/
+graphify-out/
+__pycache__/
+*.py[cod]
