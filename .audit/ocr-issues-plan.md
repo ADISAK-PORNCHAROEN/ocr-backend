@@ -36,3 +36,9 @@ At kickoff, `develop` was clean at `3374e72`. The backend had no application cod
 Run focused checks after each implementation unit. Run the full backend and frontend suites once after the final changes. Run a separate real-model CPU smoke test and a browser end-to-end flow. Review both diffs against the issue criteria and project security models before merging.
 
 Make focused commits on `develop`. Merge through pull requests. Do not push commits directly to `main`.
+
+## Progress on 2026-11-23
+
+Backend issues #10 and #2–#6 are implemented on `develop` in focused commits. The default suite, static checks, locked install and real-model CPU smoke pass locally. A browser flow through the frontend BFF against the real loopback backend verified a synthetic Thai PNG, a two-page PDF, page images, OCR output, edited-text export and deletion. Issue status remains open until the changes are pushed, reviewed, CI passes and the backend implementation PR is merged.
+
+Frontend issues #7–#9 are implemented in `ADISAK-PORNCHAROEN/ocr-frontend` on `develop`; local unit, Playwright, build and live-backend integration checks pass. Existing foundation/design PRs and the implementation PR from `develop` to `main` still need to be reconciled with the latest branch state and merged through PRs. Keep both repositories' uncommitted documentation/index state intact while finalizing their review paths. Close backend #1 only after child issues #2–#10 have merged and its product-level requirements have evidence.

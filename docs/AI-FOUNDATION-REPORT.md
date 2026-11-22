@@ -1,6 +1,6 @@
 # AI foundation report
 
-Date: 2026-11-22. Scope: documentation, project-local skills and explicitly requested project-local Graphify CLI and Git hook. The repository contains agreed design documents, not an implemented OCR backend.
+Updated: 2026-11-23. The foundation setup was documentation and project-local skills; the current `develop` branch also contains the OCR backend implementation. The implementation and its evidence are tracked separately from the foundation package inventory below.
 
 ## Delivery and evidence
 
@@ -12,7 +12,7 @@ The user separately requested the Graphify CLI and Git `post-commit` update hook
 
 ## Representative journey
 
-Requirement: a user submits a printed Thai/English document, monitors page progress and can edit and download the result ([product](../PRODUCT.md), [spec](spec.md)). Planned backend boundaries are in [architecture](architecture.md), with HTTP examples in [API contract](frontend-api.md). [Testing](TESTING.md) describes the intended API and model verification. No application entry point, runnable endpoint, dependencies, fixtures or native test command existed at setup, so this is a document trace rather than a runtime test.
+Requirement: a user submits a printed Thai/English document, monitors page progress and can edit and download the result ([product](../PRODUCT.md), [spec](spec.md)). The backend implements the documented API and OCR adapter; the separate frontend connects through its BFF. Local evidence includes backend HTTP integration tests, CPU model smoke tests for a synthetic Thai image and two-page PDF, and a browser flow through the real loopback backend. Current commands and results are in [testing](TESTING.md). The implementation is on `develop`; PR review, CI and merge are still pending.
 
 ## Verification and gaps
 
@@ -21,8 +21,9 @@ Requirement: a user submits a printed Thai/English document, monitors page progr
 - Graphify CLI and the named local post-commit event ran; the graph does not prove OCR functionality or semantic document coverage.
 - `graphify hook status` does not recognize the custom post-commit hook because it lacks the upstream installer marker. Git commit output independently confirmed the event ran. The upstream installer also changes other hook events, which were not requested.
 - `git diff --check main` reports inherited CRLF and whitespace in copied skill resources and the byte-preserved instruction archive. These files retain the captured source bytes; no whitespace-clean result is claimed.
-- Application tests, an OCR inference run, a security scan and UI inspection did not run because the relevant implementation is absent. No native project test command was invented.
-- The security reporting contact, model limits, target performance, dependency versions, visual direction and API implementation remain open or unverified.
+- Backend native checks pass locally: Ruff lint/format, mypy, pytest (36 passed, 3 skipped), and opt-in CPU model smoke (2 passed). Frontend unit, Playwright, build, production dependency audit and real-backend browser flow also pass locally; issue and PR status must be verified on GitHub before claiming merge.
+- Manual security reviews covered upload, temporary storage, job lifecycle, model loading, frontend proxy, rendering and export. No confirmed vulnerability was found; no automated security scanner, fuzzing or native dependency audit ran.
+- OCR quality on a real-document corpus, performance benchmark, inference timeout, authentication and public deployment remain unverified or out of scope. Local limits are documented with reasons and tested boundaries, not claimed throughput guarantees.
 - PR and focused-commit rules are instructions, not a configured branch-protection policy.
 - Setup remains partial until a fresh host verifies discovery and dispatch of all five project-local skills.
 
