@@ -38,9 +38,11 @@
 ## Implementation Decisions
 
 - ใช้ OpenThai OCR Text v2.1.4 บน CPU; smoke ตรวจผลจริงและแปลง line polygon เป็น axis-aligned image coordinates
+- ไม่กำหนดเพดานจำนวนหน้าตายตัว; จำกัดไฟล์ด้วย upload bytes, page dimension/pixels และ cumulative PDF pixels แทน
 - รับไฟล์ครั้งละหนึ่งไฟล์ สร้างงานแบบ asynchronous และตรวจสถานะด้วย polling
 - ให้สถานะงานและหน้ารองรับผลสำเร็จบางส่วน หน้าที่ไม่มีข้อความเป็นหน้าสำเร็จ
 - API ให้ข้อมูล capabilities สถานะงาน รายการหน้า ผล OCR เดิม ภาพรายหน้า และการลบงานชั่วคราว ตามสัญญาที่ implement แล้วใน `docs/frontend-api.md`
+- ผลรายหน้าระบุ `ocr_duration_ms` ของการเรียก inference เท่านั้น โดยแยกจากเวลารอคิว การ render PDF และ model cold start
 - Frontend เก็บข้อความแก้ในหน่วยความจำแยกจากผลเดิม และสร้างไฟล์ดาวน์โหลดหลังดึงผลทุกหน้าที่สำเร็จ
 - กรอบและค่าความมั่นใจอ้างอิง OCR เดิม พิกัด x1/y1/x2/y2 เป็นพิกเซลของ PNG ที่ API ส่ง; confidence อยู่ช่วง 0–1
 - ลบข้อมูลเมื่อผู้ใช้จบงานอย่างชัดเจน; มี TTL, startup cleanup และ retained-job cap ที่ตั้งค่าได้
@@ -51,7 +53,7 @@
 - ทดสอบการเชื่อมโมเดลจริงด้วยชุดภาพและ PDF ตัวอย่าง เพื่อยืนยันการอ่าน การแปลงพิกัด และการทำงานบน CPU โดยไม่ใช้คะแนนคุณภาพที่ยังไม่ได้วัดเป็นเกณฑ์
 - ตรวจ flow ของ frontend ตั้งแต่อัปโหลดจนแก้ คืนค่า และดาวน์โหลด รวมถึงผลบางส่วน โดยยืนยันพฤติกรรมที่ผู้ใช้มองเห็น
 - API tests ใช้โมเดลจำลองเพื่อควบคุมผลและ timing; optional CPU smoke ใช้ภาพไทยสังเคราะห์และ PDF สองหน้า
-- ยังไม่มีคุณภาพ OCR ที่วัดบน corpus เอกสารจริงหรือ benchmark ประสิทธิภาพ จึงไม่กำหนด accuracy/latency threshold
+- ยังไม่มีคุณภาพ OCR ที่วัดบน corpus เอกสารจริง; benchmark CPU สังเคราะห์เป็นข้อมูลอ้างอิงเครื่องเดียว ไม่ใช่ accuracy หรือ throughput guarantee
 
 ## Out of Scope
 

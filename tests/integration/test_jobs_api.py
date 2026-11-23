@@ -52,7 +52,7 @@ class FakeProcessor:
             lines=(OcrLine("สวัสดี OCR", 0.98, BoundingBox(2, 4, 70, 20)),),
             image_size=ImageSize(80, 50),
         )
-        return PageArtifact(image, result)
+        return PageArtifact(image, result, ocr_duration_ms=12.345)
 
     async def close(self) -> None:
         self.closed = True
@@ -99,6 +99,7 @@ def test_upload_status_pages_page_image_and_delete(tmp_path) -> None:
         }
         pages = client.get(f"/api/v1/ocr/jobs/{job['id']}/pages").json()["pages"]
         assert pages[0]["original_text"] == "สวัสดี OCR"
+        assert pages[0]["ocr_duration_ms"] == 12.345
         assert pages[0]["lines"][0]["confidence"] == 0.98
         assert pages[0]["image_url"].endswith("/pages/1/image")
         image = client.get(pages[0]["image_url"])
@@ -110,6 +111,34 @@ def test_upload_status_pages_page_image_and_delete(tmp_path) -> None:
         assert client.get(f"/api/v1/ocr/jobs/{job['id']}").status_code == 404
         assert list(tmp_path.iterdir()) == []
     assert processor.closed
+
+
+def test_pending_page_has_no_ocr_duration_until_processor_returns(tmp_path) -> None:
+    release = threading.Event()
+    with make_client(tmp_path, FakeProcessor(release=release)) as client:
+        job = upload_image(client)
+        deadline = time.monotonic() + 5
+        page = None
+        while time.monotonic() < deadline:
+            response = client.get(f"/api/v1/ocr/jobs/{job['id']}/pages/1")
+            assert response.status_code == 200
+            page = response.json()
+            if page["status"] == "processing":
+                break
+            time.sleep(0.02)
+        queued_job = None
+        try:
+            assert page is not None and page["status"] == "processing"
+            assert page["ocr_duration_ms"] is None
+            queued_job = upload_image(client)
+            pending_page = client.get(f"/api/v1/ocr/jobs/{queued_job['id']}/pages/1").json()
+            assert pending_page["status"] == "pending"
+            assert pending_page["ocr_duration_ms"] is None
+        finally:
+            release.set()
+        wait_for_status(client, job["id"], {"completed"})
+        if queued_job is not None:
+            wait_for_status(client, queued_job["id"], {"completed"})
 
 
 def test_blank_page_is_successful_not_failed(tmp_path) -> None:
@@ -172,7 +201,7 @@ def test_job_is_failed_when_every_page_fails(tmp_path) -> None:
         async def process_page(
             self, source_path: Path, media_type: str, page_number: int
         ) -> PageArtifact:
-            return PageArtifact(png_bytes(), None, "PAGE_PROCESSING_FAILED")
+            raise RuntimeError("PDF rendering failed before OCR inference")
 
     with make_client(tmp_path, FailingProcessor()) as client:
         job = upload_image(client)
@@ -182,6 +211,7 @@ def test_job_is_failed_when_every_page_fails(tmp_path) -> None:
     assert result["progress"]["failed_pages"] == 1
     assert page["status"] == "failed"
     assert page["error"]["code"] == "PAGE_PROCESSING_FAILED"
+    assert page["ocr_duration_ms"] is None
 
 
 def test_retained_job_limit_requires_delete_before_new_upload(tmp_path) -> None:
@@ -231,11 +261,11 @@ def test_file_validation_errors_use_stable_error_envelope(tmp_path) -> None:
 
 
 def test_capabilities_reflect_configured_limits(tmp_path) -> None:
-    with make_client(tmp_path, max_pages=3, max_upload_bytes=4096) as client:
+    with make_client(tmp_path, max_upload_bytes=4096) as client:
         response = client.get("/api/v1/ocr/capabilities")
 
     assert response.status_code == 200
-    assert response.json()["max_pages"] == 3
+    assert response.json()["max_pages"] is None
     assert response.json()["max_upload_bytes"] == 4096
     assert response.json()["worker_count"] == 1
     assert response.json()["max_retained_jobs"] == 5
@@ -256,7 +286,7 @@ def test_unknown_routes_use_safe_error_envelope(tmp_path) -> None:
     }
 
 
-def test_api_reports_upload_and_page_limit_errors(tmp_path) -> None:
+def test_api_reports_upload_limit_errors(tmp_path) -> None:
     with make_client(tmp_path, max_upload_bytes=1024) as client:
         too_large = client.post(
             "/api/v1/ocr/jobs",
@@ -272,13 +302,19 @@ def test_api_reports_upload_and_page_limit_errors(tmp_path) -> None:
         assert request_too_large.status_code == 413
         assert request_too_large.json()["error"]["code"] == "FILE_TOO_LARGE"
 
-    with make_client(tmp_path, max_pages=1) as client:
-        too_many_pages = client.post(
+
+def test_api_accepts_pdf_above_previous_page_limit(tmp_path) -> None:
+    with make_client(tmp_path) as client:
+        response = client.post(
             "/api/v1/ocr/jobs",
-            files={"file": ("two-pages.pdf", pdf_bytes(2), "application/pdf")},
+            files={"file": ("many-pages.pdf", pdf_bytes(21), "application/pdf")},
         )
-        assert too_many_pages.status_code == 422
-        assert too_many_pages.json()["error"]["code"] == "PAGE_LIMIT_EXCEEDED"
+        assert response.status_code == 202
+        job = response.json()
+        assert job["progress"]["total_pages"] == 21
+        result = wait_for_status(client, job["id"], {"completed"})
+
+    assert result["progress"]["completed_pages"] == 21
 
 
 def test_multipage_pdf_returns_blank_and_failed_pages_separately(tmp_path) -> None:
@@ -289,7 +325,12 @@ def test_multipage_pdf_returns_blank_and_failed_pages_separately(tmp_path) -> No
             image = png_bytes()
             if page_number == 1:
                 return PageArtifact(image, PageCompleted("", (), ImageSize(80, 50)))
-            return PageArtifact(image, None, "PAGE_PROCESSING_FAILED")
+            return PageArtifact(
+                image,
+                None,
+                "PAGE_PROCESSING_FAILED",
+                ocr_duration_ms=18.75,
+            )
 
     with make_client(tmp_path, PartialProcessor()) as client:
         response = client.post(
@@ -309,6 +350,7 @@ def test_multipage_pdf_returns_blank_and_failed_pages_separately(tmp_path) -> No
     assert pages[0]["has_text"] is False
     assert pages[1]["status"] == "failed"
     assert pages[1]["error"]["code"] == "PAGE_PROCESSING_FAILED"
+    assert pages[1]["ocr_duration_ms"] == 18.75
     assert first_image.status_code == second_image.status_code == 200
 
 

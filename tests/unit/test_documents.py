@@ -47,15 +47,24 @@ def test_password_protected_pdf_has_specific_error(tmp_path) -> None:
         raise AssertionError("Expected protected PDF to be rejected")
 
 
-def test_pdf_page_limit_is_checked_before_queuing(tmp_path) -> None:
-    reader = DocumentReader(Settings(storage_dir=tmp_path, max_pages=1))
+def test_pdf_above_previous_page_limit_is_accepted(tmp_path) -> None:
+    reader = DocumentReader(Settings(storage_dir=tmp_path))
+
+    document = reader.prepare(BytesIO(make_pdf(21)), "many-pages.pdf", uuid4())
+
+    assert document.page_count == 21
+
+
+def test_zero_page_pdf_is_rejected(tmp_path) -> None:
+    reader = DocumentReader(Settings(storage_dir=tmp_path))
 
     try:
-        reader.prepare(BytesIO(make_pdf(2)), "too-many.pdf", uuid4())
+        reader.prepare(BytesIO(make_pdf(0)), "empty.pdf", uuid4())
     except DocumentError as error:
-        assert error.code == "PAGE_LIMIT_EXCEEDED"
+        assert error.code == "EMPTY_DOCUMENT"
+        assert error.status_code == 422
     else:
-        raise AssertionError("Expected page count to be rejected")
+        raise AssertionError("Expected an empty PDF to be rejected")
 
 
 def test_file_signature_is_used_instead_of_client_filename(tmp_path) -> None:

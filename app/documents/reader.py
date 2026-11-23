@@ -109,7 +109,8 @@ class DocumentReader:
                     "PDF_PASSWORD_PROTECTED", "PDF นี้มีรหัสผ่าน โปรดเลือกไฟล์ที่ไม่ป้องกัน", 422
                 )
             page_count = len(reader.pages)
-            self._check_page_count(page_count)
+            if page_count < 1:
+                raise DocumentError("EMPTY_DOCUMENT", "เอกสารไม่มีหน้า", 422)
             scale = self.settings.pdf_dpi / 72
             total_pixels = 0
             for page in reader.pages:
@@ -143,14 +144,6 @@ class DocumentReader:
             raise
         except (OSError, ValueError, PdfReadError, pdfium.PdfiumError, IndexError) as exc:
             raise DocumentError("CORRUPT_PDF", "PDF เสียหรืออ่านไม่ได้", 422) from exc
-
-    def _check_page_count(self, page_count: int) -> None:
-        if page_count < 1:
-            raise DocumentError("EMPTY_DOCUMENT", "เอกสารไม่มีหน้า", 422)
-        if page_count > self.settings.max_pages:
-            raise DocumentError(
-                "PAGE_LIMIT_EXCEEDED", f"รองรับไม่เกิน {self.settings.max_pages} หน้า", 422
-            )
 
     def _check_page_size(self, width: int, height: int, *, check_total: bool = True) -> int:
         pixels = width * height

@@ -6,13 +6,13 @@ Base path: `/api/v1`
 
 ## Capabilities
 
-`GET /api/v1/ocr/capabilities` returns the configured upload limits, supported media types, model revision and worker settings. Read it before accepting a file instead of hard-coding backend limits.
+`GET /api/v1/ocr/capabilities` returns upload and pixel limits, supported media types, model revision and worker settings. Read it before accepting a file instead of hard-coding backend limits. `max_pages` is `null`: there is no fixed page-count ceiling. Upload bytes, per-page dimensions/pixels, cumulative PDF pixels, queue size and retained jobs remain bounded.
 
 ```json
 {
   "supported_media_types": ["image/jpeg", "image/png", "application/pdf"],
   "max_upload_bytes": 20971520,
-  "max_pages": 20,
+  "max_pages": null,
   "pdf_dpi": 150,
   "max_page_pixels": 25000000,
   "max_total_pixels": 80000000,
@@ -88,11 +88,14 @@ The last three states are terminal. Progress and job status are derived from pag
   ],
   "image_size": { "width": 1200, "height": 1800 },
   "error": null,
+  "ocr_duration_ms": 142.37,
   "image_url": "/api/v1/ocr/jobs/7a0d4c31-3281-4c37-895e-23a33be75946/pages/1/image"
 }
 ```
 
 `original_text` and `lines` are the unedited output from OpenThai. A completed page with no text has `has_text: false`, `original_text: ""` and `lines: []`. Pending and processing pages have `has_text: null` and no result. Failed pages have `has_text: null`, no result, and an `error` object. An OCR failure may still have a rendered image available.
+
+`ocr_duration_ms` is the time spent inside the OpenThai inference call for this page, in fractional milliseconds. It is present when inference ran, including an inference call that failed; it is `null` while the page is pending/processing or when failure occurred before inference. It excludes queue wait, PDF rendering, image encoding, process-pool transfer and model download/load. The first request may take longer because the worker starts and initializes the model; use this field to compare per-page inference time, not end-to-end upload time.
 
 OpenThai returns a four-corner polygon for each line. The backend converts it to an axis-aligned rectangle by taking the minimum and maximum x/y coordinates. `box` coordinates are pixels from the top-left of the rendered image. `confidence` is in the 0–1 range. The rendered image is PNG, oriented for display and composited onto white when the uploaded image is transparent. For PDFs, each page is rendered at the `pdf_dpi` reported by capabilities. These rules were verified with the pinned model on a synthetic Thai image and PDF pages.
 
@@ -132,7 +135,6 @@ Application errors use one shape:
 | 422 | `EMPTY_FILE` | File is empty |
 | 422 | `CORRUPT_IMAGE` / `CORRUPT_PDF` | The document cannot be decoded |
 | 422 | `PDF_PASSWORD_PROTECTED` | Encrypted PDF files are not accepted |
-| 422 | `PAGE_LIMIT_EXCEEDED` | Document has too many pages |
 | 422 | `PAGE_DIMENSION_LIMIT_EXCEEDED` | A page dimension exceeds the limit |
 | 422 | `PAGE_PIXEL_LIMIT_EXCEEDED` / `PDF_PIXEL_LIMIT_EXCEEDED` / `DOCUMENT_PIXEL_LIMIT_EXCEEDED` | Rendered pixel budget is exceeded |
 | 422 | `INVALID_REQUEST` | Request parameters or multipart form are invalid |

@@ -172,12 +172,14 @@ class JobsService:
                     if not self.repository.is_available(job_id, self._now()):
                         break
                     stored.job.set_page_processing(page_number)
+                    ocr_duration_ms: float | None = None
                     try:
                         artifact = await self.processor.process_page(
                             stored.document.source_path,
                             stored.job.media_type,
                             page_number.value,
                         )
+                        ocr_duration_ms = artifact.ocr_duration_ms
                         if not self.repository.is_available(job_id, self._now()):
                             break
                         self.repository.save_page_artifact(job_id, page_number, artifact)
@@ -185,9 +187,14 @@ class JobsService:
                             stored.job.fail_page(
                                 page_number,
                                 PageFailed("PAGE_PROCESSING_FAILED", "อ่านหน้านี้ไม่ได้"),
+                                ocr_duration_ms=ocr_duration_ms,
                             )
                         else:
-                            stored.job.complete_page(page_number, artifact.result)
+                            stored.job.complete_page(
+                                page_number,
+                                artifact.result,
+                                ocr_duration_ms=ocr_duration_ms,
+                            )
                     except Exception:
                         logger.exception(
                             "OCR page processing failed for job %s page %s",
@@ -198,6 +205,7 @@ class JobsService:
                             stored.job.fail_page(
                                 page_number,
                                 PageFailed("PAGE_PROCESSING_FAILED", "อ่านหน้านี้ไม่ได้"),
+                                ocr_duration_ms=ocr_duration_ms,
                             )
                 logger.info("OCR job processing finished: %s", job_id)
             except asyncio.CancelledError:

@@ -33,6 +33,7 @@ async def test_real_model_reads_synthetic_thai_and_english_on_cpu(tmp_path: Path
 
     assert result.result is not None
     assert "สวัสดี" in result.result.original_text
+    assert result.ocr_duration_ms is not None and result.ocr_duration_ms > 0
     assert result.result.lines
     assert result.image_png.startswith(b"\x89PNG\r\n\x1a\n")
     assert all(0.0 <= line.confidence <= 1.0 for line in result.result.lines)
@@ -59,6 +60,8 @@ async def test_real_model_renders_each_pdf_page_on_cpu(tmp_path: Path) -> None:
         await processor.close()
 
     assert first.result is not None and second.result is not None
+    assert first.ocr_duration_ms is not None and first.ocr_duration_ms > 0
+    assert second.ocr_duration_ms is not None and second.ocr_duration_ms > 0
     assert first.result.original_text == second.result.original_text == ""
     assert first.result.image_size.width == second.result.image_size.width
     assert first.result.image_size.height == second.result.image_size.height

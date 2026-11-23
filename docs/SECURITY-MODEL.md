@@ -27,8 +27,8 @@
 
 | ข้อกำหนด | เจ้าของตามแผนและหลักฐาน | กรณีทดสอบที่ต้องพิสูจน์ |
 | --- | --- | --- |
-| ตรวจ extension ให้ตรงกับ magic bytes และเนื้อหาที่ decode ได้ ขนาด จำนวนหน้า และปฏิเสธ PDF ติดรหัสผ่านหรือเปิดไม่ได้ | `app/documents/reader.py`; unit/API integration tests | Tested extension mismatch, unsupported signature, corrupt image, encrypted PDF, byte/page/dimension/pixel limits |
-| จำกัดไฟล์ คิว และจำนวนงานชั่วคราว | settings, document reader, job service and capabilities endpoint | Tests cover byte/page/pixel bounds, queue full and retained-job cap |
+| ตรวจ extension ให้ตรงกับ magic bytes และเนื้อหาที่ decode ได้ ขนาดหน้าและพิกเซลรวม; ปฏิเสธ PDF ติดรหัสผ่านหรือเปิดไม่ได้ | `app/documents/reader.py`; unit/API integration tests | Tested extension mismatch, unsupported signature, corrupt/empty documents, encrypted PDF, upload-byte/page-dimension/per-page-pixel/total-pixel bounds; no fixed page-count cap |
+| จำกัดขนาดไฟล์ มิติ/พิกเซลของหน้า พิกเซลรวม คิว และจำนวนงานชั่วคราว | settings, document reader, job service and capabilities endpoint | Tests cover upload-byte, page-dimension, per-page/total-pixel bounds, queue full and retained-job cap; page count has no fixed ceiling |
 | API process เป็นผู้เขียนสถานะและ artifacts เพียงรายเดียว | job service and injected-processor integration tests | HTTP tests cover queued, processing, blank success, partial and all-failed states |
 | ลบหรือหมดอายุแล้วเข้าถึงงานไม่ได้ทันที ผล worker ที่มาช้าสร้างงานกลับไม่ได้ | job service and repository lifecycle | Tests cover delete/expiry during inference, 404 access, deferred cleanup and startup cleanup |
 | ลบต้นฉบับ ภาพหน้า และผล OCR ไม่มีประวัติถาวร | delete endpoint, TTL loop, retained cap, shutdown/startup cleanup | Tests cover delete, automatic expiry, shutdown, failed staging cleanup and marker-owned stale directory cleanup |
@@ -38,15 +38,21 @@
 
 | อินพุตและเส้นทาง | ผลกระทบที่ต้องตรวจ | สิ่งที่ยังไม่พิสูจน์ |
 | --- | --- | --- |
-| ไฟล์ภายนอก → pypdf/Pillow/PDFium → native OCR runtime | parser/runtime flaws or resource exhaustion | Byte/page/pixel limits and dependency lock exist; no fuzzing, inference timeout or native dependency audit |
+| ไฟล์ภายนอก → pypdf/Pillow/PDFium → native OCR runtime | parser/runtime flaws or resource exhaustion | Upload-byte, page-dimension, per-page/total-pixel limits and dependency lock exist; no fuzzing, inference timeout or native dependency audit; many very small PDF pages can still increase per-page memory/CPU work |
 | Hugging Face pinned runtime files → worker process | supply-chain compromise or mutable model tag | `v2.1.4` is pinned and loaded only in the worker; artifact signature/hash verification is not implemented |
 | delete/expiry → late worker result → repository | deleted data becomes accessible again | Race tests cover worker return after delete and expiry |
 | `jobId` และเลขหน้าจาก HTTP → อ่านภาพ ผล หรือลบงาน | อ่านหรือลบงานโดยไม่มีเจ้าของที่ได้รับอนุญาต | UUID4 และ repository lookup ป้องกัน path traversal; ไม่มี authentication/authorization และยังอนุญาตเฉพาะ loopback |
 | เนื้อหา OCR → frontend และข้อความ error | เนื้อหา OCR ถูกตีความเป็น markup หรือ error เปิดเผย path ภายใน | Frontend ใช้ React text/textarea; BFF จำกัดเส้นทางและส่งต่อข้อความ error จาก backend ที่กำหนดไว้ ไม่มีการใช้ raw HTML |
 
-รายการนี้เป็นสถานการณ์สำหรับทบทวน ไม่ใช่ช่องโหว่ที่ยืนยันแล้ว Backend ไม่เปิด CORS หรือ authentication และให้ใช้เฉพาะ loopback. มีขีดจำกัด upload/page/pixel/queue/retention แต่ไม่มี request หรือ inference timeout; BFF ใช้ route/method allow-list, mutation origin allow-list และ timeout 60 วินาที ไม่มีการตรวจ hash/signature ของ model artifact และ revision `v2.1.4` เป็น tag ที่เปลี่ยนปลายทางได้
+รายการนี้เป็นสถานการณ์สำหรับทบทวน ไม่ใช่ช่องโหว่ที่ยืนยันแล้ว Backend ไม่เปิด CORS หรือ authentication และให้ใช้เฉพาะ loopback. มีขีดจำกัด upload-byte/page-dimension/per-page-pixel/total-pixel/queue/retention แต่ไม่มี request หรือ inference timeout; BFF ใช้ route/method allow-list, mutation origin allow-list และ timeout 60 วินาที ไม่มีการตรวจ hash/signature ของ model artifact และ revision `v2.1.4` เป็น tag ที่เปลี่ยนปลายทางได้
 
 ## การทบทวนและหลักฐาน
+
+### Incremental review: remove page-count ceiling and expose OCR timing (2026-11-23)
+
+Reviewed the backend diff through `app/documents/reader.py`, `app/core/config.py`, `app/ocr/openthai.py`, the job/page entities and service, and the API schemas/controller. Manual checks confirmed that upload bytes, page dimensions, per-page pixels, cumulative PDF pixels, queue size and retained jobs remain enforced; unsupported, corrupt and empty files remain rejected. The timer wraps only `OpenThaiEngine.read`, is propagated on completed pages and inference failures, and remains null before an artifact is returned. The review considered [OWASP Top 10:2025 A06](https://top10.owasp.org/2025/A06_2025-Insecure_Design/), [ASVS v5.0.0 requirement 13.1.3](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x22-V13-Configuration.md) (document resource management), and [WSTG v4.2 WSTG-BUSL-08](https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/10-Business_Logic_Testing/08-Test_Upload_of_Unexpected_File_Types.html) (unexpected file types).
+
+Removing a fixed page-count ceiling also removes one bound on per-page state and CPU overhead. The upload-byte and cumulative pixel budgets limit ordinary documents, but very small PDF pages can consume little of the pixel budget while still creating per-page state and inference work. This path was not stress-tested with adversarial tiny-page PDFs; the project remains a single-user loopback demo. No confirmed vulnerability was found in the reviewed diff. No automated scanner, fuzzing, memory stress test or native dependency audit was run.
 
 การเปลี่ยนโค้ด dependency executable configuration หรือ CI ใช้ workflow ของ `.agents/skills/security-review/SKILL.md` เมื่อ setup ติดตั้ง package นั้นครบแล้ว ตรวจ diff และ boundary ที่กระทบ การสแกนทั้ง repository เป็นงานแยกจากการตั้งค่า workflow
 

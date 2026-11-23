@@ -72,6 +72,7 @@ class Page:
     status: PageStatus = PageStatus.PENDING
     result: PageCompleted | None = None
     error: PageFailed | None = None
+    ocr_duration_ms: float | None = None
 
     @property
     def has_text(self) -> bool | None:

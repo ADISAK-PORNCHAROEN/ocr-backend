@@ -67,6 +67,7 @@ class PageResponse(BaseModel):
     lines: list[OcrLineResponse] | None = None
     image_size: ImageSizeResponse | None = None
     error: PageErrorResponse | None = None
+    ocr_duration_ms: float | None
     image_url: str
 
 
@@ -77,7 +78,7 @@ class PagesResponse(BaseModel):
 class CapabilitiesResponse(BaseModel):
     supported_media_types: list[str]
     max_upload_bytes: int
-    max_pages: int
+    max_pages: int | None
     pdf_dpi: int
     max_page_pixels: int
     max_total_pixels: int
@@ -139,5 +140,6 @@ def to_page_response(job: Job, page: Page) -> PageResponse:
         error=PageErrorResponse(code=page.error.code, message=page.error.message)
         if page.error
         else None,
+        ocr_duration_ms=page.ocr_duration_ms,
         image_url=f"/api/v1/ocr/jobs/{job.id}/pages/{page.number.value}/image",
     )

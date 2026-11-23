@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     model_cache_dir: Path | None = None
     storage_dir: Path = Path(gettempdir()) / "ocr-backend" / "jobs"
     max_upload_bytes: int = Field(default=20 * 1024 * 1024, ge=1024)
-    max_pages: int = Field(default=20, ge=1, le=100)
     max_page_pixels: int = Field(default=25_000_000, ge=1_000_000)
     max_total_pixels: int = Field(default=80_000_000, ge=1_000_000)
     max_dimension: int = Field(default=12_000, ge=1000)
