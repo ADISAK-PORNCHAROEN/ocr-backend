@@ -44,4 +44,4 @@ This repository has no configured GitHub Actions workflow. Run the checks locall
 
 ## Runtime limits
 
-Current local defaults are documented in `docs/runtime-limits.md`. Upload/page limits and the retained-job cap are exposed to clients by the capabilities endpoint so a frontend does not hard-code limits.
+Current local defaults are documented in `docs/runtime-limits.md`. Upload and pixel limits, the absence of a fixed page-count cap (`max_pages: null`), and the retained-job cap are exposed by the capabilities endpoint. Page responses include `ocr_duration_ms` for model inference only.

@@ -18,8 +18,8 @@ This repository intentionally has no GitHub Actions workflow. Run these commands
 | Boundary | Tests and observable behavior |
 | --- | --- |
 | Domain | Initial page states, derived job progress, blank success, all-failed status, invalid transitions, positive page numbers |
-| File validation | Content signature and extension agreement, malformed image, encrypted PDF, upload-byte cap, page count, page dimensions and pixel budget, PDF total pixel budget, sanitized display filename |
-| HTTP contract | Multipart upload, 202/Location, status polling, page list and OCR result, PNG page image, no-store headers, stable error envelope, capabilities and configured limits |
+| File validation | Content signature and extension agreement, malformed image, encrypted/empty PDF, upload-byte cap, acceptance above the former 20-page cap, page dimensions and pixel budget, PDF total pixel budget, sanitized display filename |
+| HTTP contract | Multipart upload, 202/Location, status polling, page list and OCR result, per-page inference timing (including null before inference), PNG page image, no-store headers, stable error envelope, capabilities and configured limits |
 | Multi-page results | PDF page count, completed blank page, failed page, partial job state, page images for available outputs |
 | Queue and lifecycle | Bounded queue and retained-job cap, delete while a worker is active, discard late results, expiry, inaccessible expired jobs and temporary-file cleanup |
 | Model and renderer | Optional real OpenThai OCR on a synthetic Thai image and real two-page PDF rendering on CPU |
@@ -36,7 +36,9 @@ uv run pytest tests/smoke/test_openthai_cpu.py -vv
 Remove-Item Env:OCR_RUN_MODEL_SMOKE
 ```
 
-The smoke verifies Thai text, line boxes within the displayed image, confidence range, and rendering every page of a synthetic two-page PDF. It does not compare a corpus score or establish speed. The most recent local run on 2026-11-23 passed both smoke tests on CPU.
+The smoke verifies Thai text, line boxes within the displayed image, confidence range, positive model-call timing, and rendering every page of a synthetic two-page PDF. It does not compare a corpus score or establish a general speed guarantee. The most recent local run on 2026-11-23 passed both smoke tests on CPU.
+
+For an inference timing sample with OCR output checks on every page, run `uv run python scripts/benchmark_ocr.py --warmup-pages 1 --sample-pages 9`. The benchmark method and one measured run are recorded in `docs/runtime-limits.md`.
 
 ## Live BFF integration
 
@@ -53,6 +55,6 @@ Tests generate synthetic images and PDFs in pytest-owned temporary directories. 
 
 ## Runtime limits and measurements
 
-The inspected local machine has Windows, Python 3.13, 8 logical processors and 31.8 GB RAM. The chosen defaults are 20 MiB per upload, 20 pages, PDF rendering at 150 DPI, 25 million pixels per page, 80 million total PDF pixels, 12,000 pixels per dimension, two waiting jobs plus one active job, five retained jobs, one OCR process with one inference thread, and a one-hour TTL. Unit tests exercise the byte, page, dimension and pixel boundaries; smoke tests verify the configured PDF raster path.
+The inspected local machine has Windows, Python 3.13, 8 logical processors and 31.8 GB RAM. The chosen defaults are 20 MiB per upload, no fixed page-count ceiling, PDF rendering at 150 DPI, 25 million pixels per page, 80 million total PDF pixels, 12,000 pixels per dimension, two waiting jobs plus one active job, five retained jobs, one OCR process with one inference thread, and a one-hour TTL. Unit tests exercise the byte, empty-document, page-dimension and pixel boundaries; smoke tests verify the configured PDF raster path.
 
-These are conservative local-demo safeguards, not benchmark-derived throughput guarantees. No latency, throughput, OCR quality or peak-memory claims are made. If optimizing, measure cold start separately from warm per-page inference, record CPU/RAM and runtime/model revisions, and verify output quality alongside speed.
+These are conservative local-demo safeguards, not throughput guarantees. Per-page `ocr_duration_ms` measures only the OpenThai model call; it excludes rendering, queue wait and cold worker initialization. The measured synthetic CPU run and its input, warmup/sample count, median/range and successful OCR outputs are recorded in `docs/runtime-limits.md`. This does not establish OCR quality on real documents, end-to-end latency, concurrent throughput or peak memory.
