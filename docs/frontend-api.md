@@ -8,6 +8,8 @@ Base path: `/api/v1`
 
 `GET /api/v1/ocr/capabilities` returns upload and pixel limits, supported media types, model revision and worker settings. Read it before accepting a file instead of hard-coding backend limits. `max_pages` is `null`: there is no fixed page-count ceiling. Upload bytes, per-page dimensions/pixels, cumulative PDF pixels, queue size and retained jobs remain bounded.
 
+No fixed count limit does not mean unlimited work: each page creates job state and an inference call. PDFs with many small pages can still increase memory use and total processing time; keep this single-user service on loopback.
+
 ```json
 {
   "supported_media_types": ["image/jpeg", "image/png", "application/pdf"],
