@@ -9,6 +9,7 @@ import sys
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter_ns
 from typing import Any, Protocol, cast
 
 import pypdfium2 as pdfium
@@ -26,6 +27,7 @@ class PageArtifact:
     image_png: bytes
     result: PageCompleted | None
     error_code: str | None = None
+    ocr_duration_ms: float | None = None
 
 
 class OcrProcessor(Protocol):
@@ -107,8 +109,13 @@ def _process_page(
     image_png = buffer.getvalue()
     if _engine is None:
         raise RuntimeError("OpenThai OCR runtime was not initialized")
+    ocr_duration_ms: float | None = None
     try:
-        raw = _engine.read(image)
+        inference_started_at = perf_counter_ns()
+        try:
+            raw = _engine.read(image)
+        finally:
+            ocr_duration_ms = (perf_counter_ns() - inference_started_at) / 1_000_000
         raw_lines = raw.get("lines", [])
         lines = tuple(
             OcrLine(
@@ -124,10 +131,19 @@ def _process_page(
             lines=lines,
             image_size=ImageSize(image.width, image.height),
         )
-        return PageArtifact(image_png=image_png, result=result)
+        return PageArtifact(
+            image_png=image_png,
+            result=result,
+            ocr_duration_ms=ocr_duration_ms,
+        )
     except Exception:
         logging.getLogger(__name__).exception("OpenThai inference failed for a rendered page")
-        return PageArtifact(image_png=image_png, result=None, error_code="PAGE_PROCESSING_FAILED")
+        return PageArtifact(
+            image_png=image_png,
+            result=None,
+            error_code="PAGE_PROCESSING_FAILED",
+            ocr_duration_ms=ocr_duration_ms,
+        )
 
 
 def _axis_aligned_box(points: list[list[float]], width: int, height: int) -> BoundingBox:

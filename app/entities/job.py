@@ -93,21 +93,35 @@ class Job:
             raise ValueError("Only pending pages can start processing")
         page.status = PageStatus.PROCESSING
 
-    def complete_page(self, page_number: PageNumber, result: PageCompleted) -> None:
+    def complete_page(
+        self,
+        page_number: PageNumber,
+        result: PageCompleted,
+        *,
+        ocr_duration_ms: float | None = None,
+    ) -> None:
         page = self._page(page_number)
         if page.status is not PageStatus.PROCESSING:
             raise ValueError("Only processing pages can be completed")
         page.status = PageStatus.COMPLETED
         page.result = result
         page.error = None
+        page.ocr_duration_ms = ocr_duration_ms
 
-    def fail_page(self, page_number: PageNumber, error: PageFailed) -> None:
+    def fail_page(
+        self,
+        page_number: PageNumber,
+        error: PageFailed,
+        *,
+        ocr_duration_ms: float | None = None,
+    ) -> None:
         page = self._page(page_number)
         if page.status is not PageStatus.PROCESSING:
             raise ValueError("Only processing pages can fail")
         page.status = PageStatus.FAILED
         page.error = error
         page.result = None
+        page.ocr_duration_ms = ocr_duration_ms
 
     def _page(self, page_number: PageNumber) -> Page:
         try:

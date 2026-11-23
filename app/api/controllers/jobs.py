@@ -26,7 +26,7 @@ async def capabilities(request: Request) -> CapabilitiesResponse:
     return CapabilitiesResponse(
         supported_media_types=["image/jpeg", "image/png", "application/pdf"],
         max_upload_bytes=settings.max_upload_bytes,
-        max_pages=settings.max_pages,
+        max_pages=None,
         pdf_dpi=settings.pdf_dpi,
         max_page_pixels=settings.max_page_pixels,
         max_total_pixels=settings.max_total_pixels,
