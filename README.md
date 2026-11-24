@@ -4,7 +4,9 @@ A local FastAPI playground for extracting printed Thai and English text from JPG
 
 ## Swagger walkthrough
 
-[Watch the Swagger UI demo](docs/assets/ocr-backend-swagger-demo.webm). The clip uses a synthetic, one-page Thai and English PDF with no personal data. It shows the live capabilities response, upload, job polling, OCR text and per-page inference timing, and job deletion. The `pdf_dpi` displayed in the recording comes from that local runtime; `.env.example` defaults to 150 DPI.
+<video controls muted src="https://github.com/user-attachments/assets/760102d2-07f4-4f0e-943a-cd644df5634b"></video>
+
+[Download the WebM](docs/assets/ocr-backend-swagger-demo.webm). The clip uses a synthetic, one-page Thai and English PDF with no personal data. It shows the live capabilities response, upload, job polling, OCR text and per-page inference timing, and job deletion. The `pdf_dpi` displayed in the recording comes from that local runtime; `.env.example` defaults to 150 DPI.
 
 ## Requirements and setup
 
