@@ -22,7 +22,7 @@ Copy-Item .env.example .env.local
 uv sync --group dev
 ~~~
 
-`.env.local` is optional and ignored by Git. Start with `.env.example`; change only the local `OCR_*` values needed for your machine. `OCR_MODEL_CACHE_DIR` is optional; without it, Hugging Face uses its normal user cache.
+`.env.local` is optional and ignored by Git. Start with `.env.example`; change only the local `OCR_*` values needed for your machine. `OCR_MODEL_CACHE_DIR` is optional; without it, Hugging Face uses its normal user cache. Do not commit `.env.local`, model weights, uploaded documents, or OCR results.
 
 ## Run locally
 
@@ -40,19 +40,16 @@ Read capabilities before accepting an upload: supported media types and limits c
 
 ## API walkthrough
 
-The backend accepts one multipart field named `file`. Use the `id` returned by the upload response in the following requests. Keep polling while the job is `queued` or `processing`; page results are ready when the job reaches a terminal status.
+The backend accepts one multipart field named `file`. Use the `id` returned by the upload response in the following requests. Poll while the job is `queued` or `processing`. `GET /pages` lists current page states at any time; fetch final page results after the job reaches a terminal status.
 
 ~~~powershell
 $base = "http://127.0.0.1:8000"
 
-# Check readiness and read the backend's current limits.
 curl.exe "$base/health"
 curl.exe "$base/api/v1/ocr/capabilities"
 
-# Upload one JPG, PNG, or PDF; copy the returned id for the requests below.
 curl.exe -X POST "$base/api/v1/ocr/jobs" -F "file=@.\document.pdf"
 
-# Replace <job-id> with the id from the 202 Accepted response.
 curl.exe "$base/api/v1/ocr/jobs/<job-id>"
 curl.exe "$base/api/v1/ocr/jobs/<job-id>/pages"
 curl.exe "$base/api/v1/ocr/jobs/<job-id>/pages/1"
@@ -84,24 +81,36 @@ See [runtime limits and measured OCR timings](docs/runtime-limits.md) for the fu
 
 ~~~text
 app/
-├── main.py                     # FastAPI app, lifespan, router setup
-├── core/                       # Settings, errors, and middleware
-├── entities/                   # Job and page state
-├── repositories/               # Temporary job and artifact storage
-├── services/                   # Queue, OCR lifecycle, progress, expiry, deletion
+├── main.py
+├── core/
+├── entities/
+├── repositories/
+├── services/
 ├── api/
-│   ├── controllers/            # HTTP endpoints: health and OCR jobs
-│   └── schemas/                # HTTP request and response models
-├── documents/                  # File validation and page reading/rendering
-└── ocr/                        # OpenThai runtime adapter and result mapping
+│   ├── controllers/
+│   └── schemas/
+├── documents/
+└── ocr/
 
 tests/
-├── integration/                # HTTP contract and job lifecycle
-├── unit/                       # Domain, document, service, and adapter behavior
-└── smoke/                      # Optional real-model CPU checks
-scripts/                         # Local benchmark utility
-docs/                            # Architecture, API, limits, and contributor guides
+├── integration/
+├── unit/
+└── smoke/
+scripts/
+docs/
 ~~~
+
+| Path | Responsibility |
+| --- | --- |
+| `app/core/` | Settings, errors, and middleware |
+| `app/entities/` | Job and page state |
+| `app/repositories/` | Temporary job and artifact storage |
+| `app/services/` | Queue, OCR lifecycle, progress, expiry, and deletion |
+| `app/api/controllers/` | Health and OCR job HTTP endpoints |
+| `app/api/schemas/` | HTTP request and response models |
+| `app/documents/` | File validation and page reading/rendering |
+| `app/ocr/` | OpenThai runtime adapter and result mapping |
+| `tests/` and `scripts/` | Integration, unit, smoke checks, and local benchmark |
 
 The main call direction is `controller → service → repository`. The jobs service also calls the document reader and OCR adapter; entities hold domain state without HTTP types. The repository stores temporary state and files; there is no persistent database. Each layer keeps OCR-related responsibilities in its own files, following the [accepted folder structure](docs/folder-structure.md). For repository exploration, see the optional [Graphify setup](docs/agents/graphify.md).
 
