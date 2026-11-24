@@ -1,4 +1,2 @@
 docs/history/agent-instructions/AGENTS.2026-11-22-e4519a5bfa8b.md -text
 .agents/skills/** -text
-# Exclude bundled design-tool scripts from GitHub's language totals.
-.agents/skills/impeccable/scripts/** linguist-vendored
