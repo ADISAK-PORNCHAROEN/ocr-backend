@@ -23,7 +23,7 @@ This project is a local FastAPI OCR playground. The accepted design uses OpenTha
 | Architecture or API | `docs/architecture.md`, `docs/folder-structure.md` and `docs/frontend-api.md` |
 | Behavior or test change | `docs/TESTING.md` and `.agents/skills/test-engineering/SKILL.md` |
 | Application, dependency, executable configuration or CI change | `.agents/skills/security-review/SKILL.md` and `docs/SECURITY-MODEL.md` |
-| UI design | `DESIGN.md` and `.agents/skills/impeccable/SKILL.md`; its separate engine is not installed by setup and must not be downloaded without explicit request |
+| UI design | UI design belongs in [ocr-frontend](https://github.com/ADISAK-PORNCHAROEN/ocr-frontend); this repository has no UI implementation |
 | Hook changes | `.agents/skills/hook-management/SKILL.md`; only for an explicit request and after establishing host, scope, event and behavior |
 | Workflow readiness | `docs/agents/skills-checklist.md` and `docs/AI-FOUNDATION-REPORT.md` |
 

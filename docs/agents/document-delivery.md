@@ -21,5 +21,5 @@ This table records the repository state during the initial AI foundation setup. 
 | `.agents/skills/security-review/SKILL.md` and its `references/review-contract.md` | Required; change-scoped security review | No application diff to review in setup |
 | `.agents/skills/graphify/SKILL.md` | Required; source discovery | Local CLI and post-commit are documented in `docs/agents/graphify.md` |
 | `.agents/skills/hook-management/SKILL.md` and its `references/hook-change-contract.md` | Required; explicitly requested hook changes | Local post-commit configured; host lifecycle hooks not configured |
-| `.agents/skills/impeccable/SKILL.md`, `agents/openai.yaml` and `reference/hooks.md` | Required; UI design workflow | Separate engine and runtime discovery unverified |
+| `.agents/skills/impeccable/SKILL.md`, `agents/openai.yaml` and `reference/hooks.md` | Included in the initial setup snapshot for UI design | Removed from the current backend; UI work belongs in `ocr-frontend` |
 | `docs/AI-FOUNDATION-REPORT.md` | Required; evidence, limitations and continuation | Update as capabilities change |
