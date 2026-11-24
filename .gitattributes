@@ -1,3 +1,4 @@
 docs/history/agent-instructions/AGENTS.2026-11-22-e4519a5bfa8b.md -text
 .agents/skills/** -text
+# Keep bundled agent tooling out of application language statistics.
 .agents/skills/** linguist-vendored
