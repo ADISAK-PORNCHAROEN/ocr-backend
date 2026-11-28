@@ -1,0 +1,40 @@
+services:
+  fastapi-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ocr-backend:local
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    container_name: ocr-backend-api
+    ports:
+      - "${OCR_BIND_ADDRESS:-127.0.0.1}:${OCR_HOST_PORT:-5000}:8000"
+    environment:
+      OCR_MODEL_ID: ${OCR_MODEL_ID:?Set OCR_MODEL_ID in Portainer}
+      OCR_MODEL_REVISION: ${OCR_MODEL_REVISION:?Set OCR_MODEL_REVISION in Portainer}
+      OCR_MODEL_CACHE_DIR: /home/ocr/.cache/huggingface
+      OCR_STORAGE_DIR: /tmp/ocr-backend/jobs
+      OCR_MAX_UPLOAD_BYTES: ${OCR_MAX_UPLOAD_BYTES:?Set OCR_MAX_UPLOAD_BYTES in Portainer}
+      OCR_MAX_PAGE_PIXELS: ${OCR_MAX_PAGE_PIXELS:?Set OCR_MAX_PAGE_PIXELS in Portainer}
+      OCR_MAX_TOTAL_PIXELS: ${OCR_MAX_TOTAL_PIXELS:?Set OCR_MAX_TOTAL_PIXELS in Portainer}
+      OCR_MAX_DIMENSION: ${OCR_MAX_DIMENSION:?Set OCR_MAX_DIMENSION in Portainer}
+      OCR_PDF_DPI: ${OCR_PDF_DPI:?Set OCR_PDF_DPI in Portainer}
+      OCR_MAX_QUEUED_JOBS: ${OCR_MAX_QUEUED_JOBS:?Set OCR_MAX_QUEUED_JOBS in Portainer}
+      OCR_MAX_RETAINED_JOBS: ${OCR_MAX_RETAINED_JOBS:?Set OCR_MAX_RETAINED_JOBS in Portainer}
+      OCR_JOB_TTL_SECONDS: ${OCR_JOB_TTL_SECONDS:?Set OCR_JOB_TTL_SECONDS in Portainer}
+      OCR_CLEANUP_INTERVAL_SECONDS: ${OCR_CLEANUP_INTERVAL_SECONDS:?Set OCR_CLEANUP_INTERVAL_SECONDS in Portainer}
+      OCR_MODEL_THREADS: ${OCR_MODEL_THREADS:?Set OCR_MODEL_THREADS in Portainer}
+      PYTHONUTF8: "1"
+    volumes:
+      - model-cache:/home/ocr/.cache/huggingface
+    networks:
+      - ocr-backend-network
+    restart: always
+
+networks:
+  ocr-backend-network:
+    name: ${OCR_DOCKER_NETWORK:?Set OCR_DOCKER_NETWORK to an existing Docker network in Portainer}
+    external: true
+
+volumes:
+  model-cache:

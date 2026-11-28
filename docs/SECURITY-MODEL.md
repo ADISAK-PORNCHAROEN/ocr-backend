@@ -17,6 +17,12 @@
 | ไฟล์ JPG, PNG และ PDF ที่ส่งเข้า | ข้อมูลภายนอกที่ต้องตรวจ | ผ่าน HTTP ไปยังตัวอ่านไฟล์และ native OCR runtime |
 | OCR worker | รับข้อมูลหน้าและส่งผลกลับ | One ProcessPool worker loads the pinned Python runtime; API process alone updates job state |
 
+## ขอบเขตการ deploy ด้วย Docker
+
+Compose สำหรับ Portainer ให้ API ฟัง `0.0.0.0:8000` ภายใน container เพื่อให้ service อื่นบน external Docker network เดียวกันเรียกได้ ส่วนพอร์ตบน host bind ที่ `127.0.0.1:5000` เป็นค่าเริ่มต้นและปรับได้ผ่าน Portainer API ไม่มี authentication/authorization ดังนั้นทุก container บน network นั้นที่เข้าถึง API ได้สามารถเรียกอ่านและลบงานได้ ต้องใช้ network ส่วนตัวที่เชื่อถือได้ และอย่าเปิด host bind สู่อินเทอร์เน็ตโดยไม่มี access control เพิ่มเติม
+
+Compose รับ model, limits และค่าคิวจากตัวแปรใน Portainer; repository ไม่มีไฟล์ `.env` และ Docker build context จำกัดไว้ที่ Dockerfile, dependency lock/config และ source `app/` เท่านั้น Hugging Face model cache อยู่ใน named volume ส่วนเอกสาร upload, page images และ OCR artifacts อยู่ใน temporary storage ของ container ไม่เก็บใน volume ถาวร
+
 เส้นทางตามแผน: `Frontend → HTTP API → บริการงาน → ตัวอ่านเอกสารและ OCR worker → ผลรายหน้า` API จัดการข้อมูลชั่วคราวและการลบ Frontend อ่านภาพและผลเพื่อแสดง แก้ และดาวน์โหลด
 
 ไม่มีระบบตัวตนหรือการแยก tenant และไม่มี authorization สำหรับ job ID; deployment แบบ loopback เป็นเงื่อนไขที่ต้องคงไว้ ไม่ใช่หลักฐานว่ารองรับผู้ใช้หลายคน
@@ -47,6 +53,12 @@
 รายการนี้เป็นสถานการณ์สำหรับทบทวน ไม่ใช่ช่องโหว่ที่ยืนยันแล้ว Backend ไม่เปิด CORS หรือ authentication และให้ใช้เฉพาะ loopback. มีขีดจำกัด upload-byte/page-dimension/per-page-pixel/total-pixel/queue/retention แต่ไม่มี request หรือ inference timeout; BFF ใช้ route/method allow-list, mutation origin allow-list และ timeout 60 วินาที ไม่มีการตรวจ hash/signature ของ model artifact และ revision `v2.1.4` เป็น tag ที่เปลี่ยนปลายทางได้
 
 ## การทบทวนและหลักฐาน
+
+### Incremental review: Docker deployment configuration (2026-11-28)
+
+Reviewed `Dockerfile`, `docker-compose.yml`, `.dockerignore` and the README deployment instructions. The image runs as UID/GID `10001`, uses the pinned uv release and `uv.lock`, starts one Uvicorn worker, and publishes host port `5000` on loopback by default while exposing container port `8000` to the configured external Docker network. Build context excludes environment files, credentials, documents, caches, tests and unrelated repository files. Model cache alone persists in a named volume; the app has no database, Typhoon, authentication or secret configuration. Compose requires Portainer values for the existing Docker network and every active `OCR_*` setting; `OCR_BIND_ADDRESS` and `OCR_HOST_PORT` can override the loopback and host port defaults.
+
+OWASP Top 10:2025 A02 (Security Misconfiguration) and A03 (Software Supply Chain Failures) were used as risk categories. [WSTG-v42-CONF-01](https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/01-Test_Network_Infrastructure_Configuration/) was reviewed for network and exposed-port configuration. ASVS 5.0.0 has no directly applicable application requirement for this infrastructure-only patch, so no ASVS control is claimed. Docker Compose configuration was parsed with representative non-secret values, the image built successfully from the committed lock, and a local container running as `10001:10001` returned `/health` with status `ok`; its Docker healthcheck reached `healthy`. Docker Scout v1.18.3 was installed, but its CVE scan could not run because Docker Hub login is required; `trivy` and `grype` were not found. The Portainer deployment, external network peer access, host firewall, reverse proxy, remote reachability, image vulnerability inventory and first real-model inference were not tested. The API remains unauthenticated; widening the host bind or attaching an untrusted container to the shared network can expose job read/delete operations. This review is limited to the listed deployment diff and does not certify OWASP compliance.
 
 ### Incremental review: remove page-count ceiling and expose OCR timing (2026-11-23)
 
