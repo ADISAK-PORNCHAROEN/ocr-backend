@@ -38,6 +38,14 @@ Keep one Uvicorn worker because job state belongs to one API process. The OCR wo
 
 Read capabilities before accepting an upload: supported media types and limits come from the running backend configuration. The model is `iapp/OpenThai2.1-OCR-Text-20261118`, revision `v2.1.4`.
 
+## Docker and Portainer
+
+The Docker image runs one Uvicorn worker on container port `8000`. The Compose stack maps host port `5000` to it and binds to `127.0.0.1` by default. The API has no authentication, so keep it on loopback or an access-controlled private Docker network. A reverse proxy on the shared network can call `http://fastapi-backend:8000` directly.
+
+Before deploying the stack in Portainer, create the shared Docker network and set `OCR_DOCKER_NETWORK` to its name. Add the active model, limit, queue, expiry and thread settings from `.env.example` as Portainer stack environment variables; Compose reads those variables and does not require or create a `.env` file. Compose sets the cache and temporary storage paths inside the container. Set `OCR_HOST_PORT` to change the host port. Keep `OCR_BIND_ADDRESS` at `127.0.0.1` unless the host port must be reachable elsewhere and that exposure is protected. This backend does not currently use database or Typhoon credentials.
+
+The first OCR request downloads the pinned model. The named `model-cache` volume keeps that download across container replacement. Uploaded documents and OCR results remain in the container's temporary storage and are cleaned by the application lifecycle.
+
 ## API walkthrough
 
 The backend accepts one multipart field named `file`. Use the `id` returned by the upload response in the following requests. Poll while the job is `queued` or `processing`. `GET /pages` lists current page states at any time; fetch final page results after the job reaches a terminal status.
